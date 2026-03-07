@@ -71,7 +71,7 @@ jobs:
           cordova build android --release -- --packageType=apk
 
       - name: Subir APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: MundoJugueton-APK
           path: MundoJugueton/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
