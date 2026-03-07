@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -29,22 +29,29 @@ jobs:
 
       - name: Crear proyecto Cordova
         run: |
-          cordova create MundoJugeton com.tujuego.mundojugeton "Mundo Jugeton"
-          cd MundoJugeton
+          cordova create MundoJugueton com.tujuego.mundojugueton "Mundo Jugueton"
+          cd MundoJugueton
           cordova platform add android
 
       - name: Copiar archivos del juego
         run: |
-          cp -r juego/* MundoJugeton/www/
+          cp *.html MundoJugueton/www/ 2>/dev/null || true
+          cp *.png MundoJugueton/www/ 2>/dev/null || true
+          cp *.jpg MundoJugueton/www/ 2>/dev/null || true
+          cp *.mp3 MundoJugueton/www/ 2>/dev/null || true
+          cp *.wav MundoJugueton/www/ 2>/dev/null || true
+          cp *.ogg MundoJugueton/www/ 2>/dev/null || true
+          cp -r "Las Texturas de Ignacio" MundoJugueton/www/ 2>/dev/null || true
+          cp -r "Personajes en Resolución Original" MundoJugueton/www/ 2>/dev/null || true
 
       - name: Configurar config.xml
         run: |
-          cat > MundoJugeton/config.xml << 'EOF'
+          cat > MundoJugueton/config.xml << 'XMLEOF'
           <?xml version='1.0' encoding='utf-8'?>
-          <widget id="com.tujuego.mundojugeton" version="1.0.0"
+          <widget id="com.tujuego.mundojugueton" version="1.0.0"
             xmlns="http://www.w3.org/ns/widgets"
             xmlns:cdv="http://cordova.apache.org/ns/1.0">
-            <name>Mundo Jugeton</name>
+            <name>Mundo Jugueton</name>
             <description>Juego educativo interactivo</description>
             <author>Las Cabezas de Ignacio</author>
             <content src="index.html" />
@@ -56,15 +63,15 @@ jobs:
             <allow-intent href="http://*/*" />
             <allow-intent href="https://*/*" />
           </widget>
-          EOF
+          XMLEOF
 
       - name: Compilar APK
         run: |
-          cd MundoJugeton
+          cd MundoJugueton
           cordova build android --release -- --packageType=apk
 
-      - name: Subir APK como artefacto
+      - name: Subir APK
         uses: actions/upload-artifact@v3
         with:
-          name: MundoJugeton-APK
-          path: MundoJugeton/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          name: MundoJugueton-APK
+          path: MundoJugueton/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
