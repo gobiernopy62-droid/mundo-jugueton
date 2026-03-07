@@ -1,0 +1,70 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # permite ejecutarlo manualmente desde GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v3
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Instalar Cordova
+        run: npm install -g cordova
+
+      - name: Crear proyecto Cordova
+        run: |
+          cordova create MundoJugeton com.tujuego.mundojugeton "Mundo Jugeton"
+          cd MundoJugeton
+          cordova platform add android
+
+      - name: Copiar archivos del juego
+        run: |
+          cp -r juego/* MundoJugeton/www/
+
+      - name: Configurar config.xml
+        run: |
+          cat > MundoJugeton/config.xml << 'EOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget id="com.tujuego.mundojugeton" version="1.0.0"
+            xmlns="http://www.w3.org/ns/widgets"
+            xmlns:cdv="http://cordova.apache.org/ns/1.0">
+            <name>Mundo Jugeton</name>
+            <description>Juego educativo interactivo</description>
+            <author>Las Cabezas de Ignacio</author>
+            <content src="index.html" />
+            <preference name="Orientation" value="landscape" />
+            <preference name="Fullscreen" value="true" />
+            <preference name="AllowInlineMediaPlayback" value="true" />
+            <preference name="android-minSdkVersion" value="22" />
+            <preference name="android-targetSdkVersion" value="33" />
+            <allow-intent href="http://*/*" />
+            <allow-intent href="https://*/*" />
+          </widget>
+          EOF
+
+      - name: Compilar APK
+        run: |
+          cd MundoJugeton
+          cordova build android --release -- --packageType=apk
+
+      - name: Subir APK como artefacto
+        uses: actions/upload-artifact@v3
+        with:
+          name: MundoJugeton-APK
+          path: MundoJugeton/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk

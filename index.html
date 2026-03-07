@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Mundo Juguetón!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+            background-image: url('Fondo.png');
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            image-rendering: pixelated;
+            overflow: hidden;
+        }
+
+        /* ── Personaje ── */
+        #character {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 374px;
+            image-rendering: pixelated;
+            transition: left 0.5s ease;
+        }
+
+        #gameContainer.menu-open #character {
+            left: 35%;
+        }
+
+        /* ── Diálogo ── */
+        #dialogueBox {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(0, 0, 0, 0.85);
+            padding: 28px;
+            border-top: 4px solid #fbbf24;
+            transition: right 0.5s ease;
+        }
+
+        #gameContainer.menu-open #dialogueBox {
+            right: 320px;
+        }
+
+        #dialogueText {
+            color: white;
+            font-size: 24px;
+            line-height: 1.6;
+            min-height: 88px;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 9px;
+            height: 28px;
+            background-color: white;
+            margin-left: 4px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* ── Botón del libro de puntajes ── */
+        #scorebookBtn {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #fbbf24;
+            border-radius: 12px;
+            color: #fbbf24;
+            font-size: 26px;
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.15s;
+        }
+        #scorebookBtn:hover {
+            background: rgba(251,191,36,0.2);
+            transform: scale(1.08);
+        }
+
+        /* ── Panel de puntajes ── */
+        #scorebookPanel {
+            position: absolute;
+            top: 14px;
+            left: 76px;
+            z-index: 20;
+            background: linear-gradient(160deg, #1e1b4b, #312e81);
+            border: 3px solid #fbbf24;
+            border-radius: 18px;
+            padding: 20px 24px;
+            width: 360px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(251,191,36,0.15);
+            display: none;
+        }
+        #scorebookPanel.show { display: block; }
+
+        #scorebookPanel h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-align: center;
+            margin-bottom: 16px;
+            text-shadow: 0 0 12px rgba(251,191,36,0.5);
+            border-bottom: 2px solid rgba(255,255,255,0.15);
+            padding-bottom: 10px;
+        }
+
+        .score-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .score-row:last-child { margin-bottom: 0; }
+
+        .score-game {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e0e7ff;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .score-game .sg-icon { font-size: 20px; }
+
+        .score-val {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fbbf24;
+        }
+        .score-val.none {
+            color: rgba(255,255,255,0.3);
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        /* ── Botón volver al modo ── */
+        #backToModeBtn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 10px 14px;
+            color: rgba(255,255,255,0.85);
+            font-family: 'Fredoka', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, transform 0.15s;
+            margin-bottom: 16px;
+        }
+        #backToModeBtn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.6);
+            transform: scale(1.03);
+        }
+
+        /* ── Botón bloqueado en modo Historia ── */
+        .minigame-btn.locked {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(60%);
+        }
+        .minigame-btn.locked:hover {
+            transform: none;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border-color: rgba(255,255,255,0.35);
+        }
+        .lock-icon {
+            font-size: 18px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* ── Menú lateral (barra derecha) ── */
+        #minigamesMenu {
+            position: absolute;
+            top: 0;
+            right: -324px;
+            width: 320px;
+            height: 100%;
+            background: linear-gradient(180deg, #7c3aed 0%, #be185d 100%);
+            border-left: 4px solid #fbbf24;
+            box-shadow: -8px 0 30px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 18px;
+            transition: right 0.5s ease;
+            overflow-y: auto;
+        }
+
+        #minigamesMenu.show {
+            right: 0;
+        }
+
+        #minigamesMenu h2 {
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            padding-bottom: 14px;
+            line-height: 1.4;
+        }
+
+        .menu-content {
+            display: flex;
+            flex-direction: column;
+            gap: 11px;
+            flex: 1;
+        }
+
+        .minigame-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border: 2px solid rgba(255,255,255,0.35);
+            border-radius: 14px;
+            padding: 13px 14px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .minigame-btn:hover {
+            background: linear-gradient(135deg, rgba(251,191,36,0.3), rgba(251,191,36,0.1));
+            border-color: #fbbf24;
+            transform: scale(1.03);
+        }
+        .minigame-btn .mg-icon { font-size: 26px; flex-shrink: 0; }
+        .minigame-btn .mg-label { display: flex; flex-direction: column; }
+        .minigame-btn .mg-desc {
+            font-size: 12px;
+            opacity: 0.75;
+            font-weight: 400;
+            margin-top: 2px;
+            line-height: 1.3;
+        }
+
+        .prog-badge { font-size: 18px; }
+        .prog-badge.done { color: #4ade80; }
+        .prog-badge.pending { color: rgba(255,255,255,0.3); font-size: 15px; font-weight: 400; }
+
+        /* ── Pantalla de selección de modo ── */
+        #modeSelectScreen {
+            position: absolute;
+            inset: 0;
+            z-index: 100;
+            background: linear-gradient(160deg, #0f0c29, #302b63, #24243e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            transition: opacity 0.6s ease;
+        }
+        #modeSelectScreen.hide {
+            opacity: 0;
+            pointer-events: none;
+        }
+        #modeSelectScreen .mode-title {
+            font-size: 38px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 24px rgba(251,191,36,0.6), 0 2px 8px rgba(0,0,0,0.6);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+        #modeSelectScreen .mode-subtitle {
+            font-size: 20px;
+            color: rgba(255,255,255,0.6);
+            margin-top: -30px;
+            text-align: center;
+        }
+        .mode-cards {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+        .mode-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 24px;
+            padding: 36px 40px;
+            width: 220px;
+            cursor: pointer;
+            font-family: 'Fredoka', sans-serif;
+            color: white;
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 22px;
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .mode-card.historia::before {
+            background: linear-gradient(145deg, rgba(124,58,237,0.3), rgba(190,24,93,0.2));
+        }
+        .mode-card.clasico::before {
+            background: linear-gradient(145deg, rgba(251,191,36,0.2), rgba(245,101,0,0.2));
+        }
+        .mode-card:hover {
+            transform: translateY(-6px) scale(1.04);
+            border-color: #fbbf24;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 32px rgba(251,191,36,0.2);
+        }
+        .mode-card:hover::before { opacity: 1; }
+        .mode-card .card-icon  { font-size: 58px; position: relative; z-index: 1; }
+        .mode-card .card-name  { font-size: 24px; font-weight: 700; position: relative; z-index: 1; text-align: center; }
+        .mode-card .card-desc  { font-size: 13px; opacity: 0.65; text-align: center; line-height: 1.4; position: relative; z-index: 1; }
+        .mode-divider { font-size: 28px; color: rgba(255,255,255,0.2); }
+        #modeSelectScreen canvas { position: absolute; inset: 0; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+
+        <!-- ── Pantalla de selección de modo ── -->
+        <div id="modeSelectScreen">
+            <canvas id="starsCanvas"></canvas>
+            <div class="mode-title">🎮 ¡Mundo Juguetón! 🎮</div>
+            <div class="mode-subtitle">Elige tu modo de juego</div>
+            <div class="mode-cards">
+                <div class="mode-card historia" onclick="selectMode('historia')">
+                    <span class="card-icon">📖</span>
+                    <span class="card-name">Modo Historia</span>
+                    <span class="card-desc">Vive la aventura con Juguetón y sus amigos</span>
+                </div>
+                <div class="mode-divider">✦</div>
+                <div class="mode-card clasico" onclick="selectMode('clasico')">
+                    <span class="card-icon">⚡</span>
+                    <span class="card-name">Modo Clásico</span>
+                    <span class="card-desc">¡Elige cualquier minijuego y juega directo!</span>
+                </div>
+            </div>
+        </div>
+
+        <img id="character" src="Juguetón.png" alt="Juguetón">
+
+        <!-- Botón libro de puntajes -->
+        <button id="scorebookBtn" title="Ver puntajes máximos">📖</button>
+
+        <!-- Panel de puntajes -->
+        <div id="scorebookPanel">
+            <!-- Modo Clásico -->
+            <div id="panelClasico">
+                <h3>🏆 Mejores Puntajes</h3>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">🍪</span> Portal Galleta</div>
+                    <div class="score-val" id="sc-portalGalleta">—</div>
+                </div>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">🕷️</span> Salva a Aqua</div>
+                    <div class="score-val" id="sc-salvaAqua">—</div>
+                </div>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">🏃</span> ¡Corre, Jack!</div>
+                    <div class="score-val" id="sc-correJack">—</div>
+                </div>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">💡</span> Adivinanzas</div>
+                    <div class="score-val" id="sc-adivinanzas">—</div>
+                </div>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">🔫</span> Atrapa a Portal</div>
+                    <div class="score-val" id="sc-atrapaPortal">—</div>
+                </div>
+                <div class="score-row">
+                    <div class="score-game"><span class="sg-icon">📱</span> Portal Molesta</div>
+                    <div class="score-val" id="sc-tenCuidadoPortal">—</div>
+                </div>
+            </div>
+            <!-- Modo Historia -->
+            <div id="panelHistoria" style="display:none;">
+                <h3>📖 Progreso Historia</h3>
+                <div class="score-row" id="prog-portalGalleta">
+                    <div class="score-game"><span class="sg-icon">🍪</span> Portal Galleta</div>
+                    <div class="score-val prog-badge" id="badge-portalGalleta">—</div>
+                </div>
+                <div class="score-row" id="prog-salvaAqua">
+                    <div class="score-game"><span class="sg-icon">🕷️</span> Salva a Aqua</div>
+                    <div class="score-val prog-badge" id="badge-salvaAqua">—</div>
+                </div>
+                <div class="score-row" id="prog-correJack">
+                    <div class="score-game"><span class="sg-icon">🏃</span> ¡Corre, Jack!</div>
+                    <div class="score-val prog-badge" id="badge-correJack">—</div>
+                </div>
+                <div class="score-row" id="prog-adivinanzas">
+                    <div class="score-game"><span class="sg-icon">💡</span> Adivinanzas</div>
+                    <div class="score-val prog-badge" id="badge-adivinanzas">—</div>
+                </div>
+                <div class="score-row" id="prog-atrapaPortal">
+                    <div class="score-game"><span class="sg-icon">🔫</span> Atrapa a Portal</div>
+                    <div class="score-val prog-badge" id="badge-atrapaPortal">—</div>
+                </div>
+                <div class="score-row" id="prog-tenCuidadoPortal">
+                    <div class="score-game"><span class="sg-icon">📱</span> Portal Molesta</div>
+                    <div class="score-val prog-badge" id="badge-tenCuidadoPortal">—</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dialogueBox">
+            <div id="dialogueText"></div>
+        </div>
+
+        <div id="minigamesMenu">
+            <button id="backToModeBtn" onclick="goBackToModeSelect()">⬅️ Cambiar modo</button>
+            <h2>🎮 MINI-<br>JUEGOS 🎮</h2>
+            <div class="menu-content">
+                <button class="minigame-btn" data-game="portalGalleta" data-href="PortalGalleta.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='PortalGalleta.html'">
+                    <span class="mg-icon">🍪</span>
+                    <div class="mg-label">
+                        Portal Galleta
+                        <span class="mg-desc">¡Atrapa galletas antes de que caigan al suelo!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" data-game="salvaAqua" data-href="SalvaAqua.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='SalvaAqua.html'">
+                    <span class="mg-icon">🕷️</span>
+                    <div class="mg-label">
+                        Salva a Aqua
+                        <span class="mg-desc">¡Aplasta las arañas antes de que lleguen a Aqua!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" data-game="correJack" data-href="CorreJack.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='CorreJack.html'">
+                    <span class="mg-icon">🏃</span>
+                    <div class="mg-label">
+                        ¡Corre, Jack!
+                        <span class="mg-desc">¡Salta las rocas y sobrevive el mayor tiempo posible!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" data-game="adivinanzas" data-href="AdivinanzasConListo.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='AdivinanzasConListo.html'">
+                    <span class="mg-icon">💡</span>
+                    <div class="mg-label">
+                        Adivinanzas con Listo
+                        <span class="mg-desc">¡Resuelve operaciones matemáticas antes de que se acabe el tiempo!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" data-game="atrapaPortal" data-href="AtrapaPortal.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='AtrapaPortal.html'">
+                    <span class="mg-icon">🔫</span>
+                    <div class="mg-label">
+                        Atrapa a Portal
+                        <span class="mg-desc">¡Dispárale a Portal Hombre antes de que se teletransporte!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" data-game="tenCuidadoPortal" data-href="TenCuidadoPortal.html" onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='TenCuidadoPortal.html'">
+                    <span class="mg-icon">📱</span>
+                    <div class="mg-label">
+                        Portal Molesta
+                        <span class="mg-desc">¡Aplasta a Portal Mujer con el Martillo antes de que se teletransporte!</span>
+                    </div>
+                </button>
+                <button class="minigame-btn" id="btn-finalBattle"
+                    style="display:none; border-color:#cc44ff; background:linear-gradient(135deg,rgba(140,0,200,0.25),rgba(255,0,80,0.15));"
+                    onclick="sessionStorage.setItem('jugueton_came_from_minigame','1'); window.location.href='TheFinalBattle.html'">
+                    <span class="mg-icon">🕷️</span>
+                    <div class="mg-label">
+                        La Batalla Final
+                        <span class="mg-desc">¡Demuestra que puedes derrotar a Araña Jefe de nuevo!</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Diálogos ──
+        const DIALOGUE_INTRO   = '¡Hola!, soy Juguetón, el anfitrión de este juego. Elige el minijuego que quieras jugar:';
+        const DIALOGUE_CLASICO = '¡Hola de nuevo! ¿Listo para seguir jugando?';
+        const TOTAL_GAMES = 6;
+        const HISTORIA_COMPLETED_KEY = 'historia_completed';
+
+        // Orden de desbloqueo en modo Historia
+        const HISTORIA_ORDER = ['portalGalleta', 'salvaAqua', 'correJack', 'adivinanzas', 'atrapaPortal', 'tenCuidadoPortal'];
+        const HISTORIA_HREFS = {
+            'portalGalleta':    'PortalGalleta.html',
+            'salvaAqua':        'SalvaAqua.html',
+            'correJack':        'CorreJack.html',
+            'adivinanzas':      'AdivinanzasConListo.html',
+            'atrapaPortal':     'AtrapaPortal.html',
+            'tenCuidadoPortal': 'TenCuidadoPortal.html',
+        };
+
+        function getCompletedGames() {
+            return JSON.parse(localStorage.getItem(HISTORIA_COMPLETED_KEY) || '[]');
+        }
+
+        function buildReturnDialogue() {
+            // Solo se usa cuando se regresa de un minijuego
+            const mode     = sessionStorage.getItem('jugueton_mode') || 'clasico';
+            const lastWin  = sessionStorage.getItem('jugueton_last_win');
+
+            if (mode !== 'historia') {
+                return DIALOGUE_CLASICO;
+            }
+
+            // Historia mode
+            const completed = getCompletedGames();
+
+            if (lastWin) {
+                sessionStorage.removeItem('jugueton_last_win');
+                const remaining = TOTAL_GAMES - completed.length;
+                if (remaining === 0) {
+                    return '¡Cómo pudiste pasarte todos mis minijuegos!, ¿Con que te crees muy bueno, eh?, ahora te demostraré cómo se juega de verdad...';
+                }
+                return `¡Felicidades!, has ganado el minijuego ${lastWin}. ¡Anda, ahora te quedan solo ${remaining} por completar! :D`;
+            }
+
+            if (completed.length === 0) {
+                return DIALOGUE_INTRO;
+            }
+
+            const remaining = TOTAL_GAMES - completed.length;
+            if (remaining === 0) {
+                return '¿Ya te aburriste de ganar? ¡Vuelve cuando quieras retar mis minijuegos de nuevo!';
+            }
+            return `¡Bienvenido de vuelta! Te quedan ${remaining} minijuego${remaining === 1 ? '' : 's'} por completar. ¡Tú puedes!`;
+        }
+
+        const dialogueTextElement = document.getElementById('dialogueText');
+        const minigamesMenu       = document.getElementById('minigamesMenu');
+        const gameContainer       = document.getElementById('gameContainer');
+
+        const SESSION_KEY = 'jugueton_came_from_minigame';
+
+        // ── Score keys para localStorage ──
+        const SCORE_KEYS = {
+            'sc-portalGalleta':    'score_portalGalleta',
+            'sc-salvaAqua':        'score_salvaAqua',
+            'sc-correJack':        'score_correJack',
+            'sc-adivinanzas':      'score_adivinanzas',
+            'sc-atrapaPortal':     'score_atrapaPortal',
+            'sc-tenCuidadoPortal': 'score_tenCuidadoPortal',
+        };
+
+        function loadScores() {
+            const mode = sessionStorage.getItem('jugueton_mode') || 'clasico';
+            if (mode === 'historia') {
+                // Switch panels
+                document.getElementById('panelClasico').style.display  = 'none';
+                document.getElementById('panelHistoria').style.display = 'block';
+                // Fill progress badges
+                const completed = getCompletedGames();
+                const PROG_KEYS = {
+                    'badge-portalGalleta':    'portalGalleta',
+                    'badge-salvaAqua':        'salvaAqua',
+                    'badge-correJack':        'correJack',
+                    'badge-adivinanzas':      'adivinanzas',
+                    'badge-atrapaPortal':     'atrapaPortal',
+                    'badge-tenCuidadoPortal': 'tenCuidadoPortal',
+                };
+                for (const [elemId, key] of Object.entries(PROG_KEYS)) {
+                    const el = document.getElementById(elemId);
+                    if (completed.includes(key)) {
+                        el.textContent = '✅';
+                        el.className   = 'score-val prog-badge done';
+                    } else {
+                        el.textContent = 'Pendiente';
+                        el.className   = 'score-val prog-badge pending';
+                    }
+                }
+            } else {
+                document.getElementById('panelClasico').style.display  = 'block';
+                document.getElementById('panelHistoria').style.display = 'none';
+                for (const [elemId, lsKey] of Object.entries(SCORE_KEYS)) {
+                    const el  = document.getElementById(elemId);
+                    const val = localStorage.getItem(lsKey);
+                    if (val !== null) {
+                        el.textContent = val;
+                        el.classList.remove('none');
+                    } else {
+                        el.textContent = '—';
+                        el.classList.add('none');
+                    }
+                }
+            }
+        }
+
+        // ── Scorebook toggle ──
+        const scorebookBtn   = document.getElementById('scorebookBtn');
+        const scorebookPanel = document.getElementById('scorebookPanel');
+        let scorebookOpen = false;
+
+        scorebookBtn.addEventListener('click', () => {
+            scorebookOpen = !scorebookOpen;
+            if (scorebookOpen) {
+                loadScores();
+                scorebookPanel.classList.add('show');
+            } else {
+                scorebookPanel.classList.remove('show');
+            }
+        });
+
+        // Cerrar al hacer clic fuera del panel/botón
+        document.addEventListener('click', (e) => {
+            if (scorebookOpen &&
+                !scorebookPanel.contains(e.target) &&
+                e.target !== scorebookBtn) {
+                scorebookOpen = false;
+                scorebookPanel.classList.remove('show');
+            }
+        });
+
+        function applyHistoriaLocks() {
+            const mode = sessionStorage.getItem('jugueton_mode') || 'clasico';
+            const btns = document.querySelectorAll('.minigame-btn[data-game]');
+
+            if (mode !== 'historia') {
+                // Modo clásico: todos desbloqueados
+                btns.forEach(btn => {
+                    btn.classList.remove('locked');
+                    btn.disabled = false;
+                    const lockEl = btn.querySelector('.lock-icon');
+                    if (lockEl) lockEl.remove();
+                    const orig = btn.getAttribute('data-href');
+                    if (orig) btn.onclick = () => { sessionStorage.setItem(SESSION_KEY, '1'); window.location.href = orig; };
+                });
+                return;
+            }
+
+            const completed = getCompletedGames();
+            btns.forEach(btn => {
+                const gameKey = btn.getAttribute('data-game');
+                const idx     = HISTORIA_ORDER.indexOf(gameKey);
+                const isUnlocked = idx === 0 || completed.includes(HISTORIA_ORDER[idx - 1]);
+                const lockEl = btn.querySelector('.lock-icon');
+
+                if (isUnlocked) {
+                    btn.classList.remove('locked');
+                    btn.disabled = false;
+                    if (lockEl) lockEl.remove();
+                    const orig = btn.getAttribute('data-href');
+                    btn.onclick = () => { sessionStorage.setItem(SESSION_KEY, '1'); window.location.href = orig; };
+                } else {
+                    btn.classList.add('locked');
+                    btn.disabled = true;
+                    if (!lockEl) {
+                        const lock = document.createElement('span');
+                        lock.className = 'lock-icon';
+                        lock.textContent = '🔒';
+                        btn.appendChild(lock);
+                    }
+                    btn.onclick = null;
+                }
+            });
+        }
+
+        function openMenu() {
+            // Mostrar "La Batalla Final" solo en Historia y si ya derrotaste al jefe
+            const _menuMode     = sessionStorage.getItem('jugueton_mode') || 'clasico';
+            const _bossBeaten   = !!localStorage.getItem('finalBattleDefeated');
+            const _finalBtn     = document.getElementById('btn-finalBattle');
+            if (_finalBtn) {
+                _finalBtn.style.display = (_menuMode === 'historia' && _bossBeaten) ? 'flex' : 'none';
+            }
+            applyHistoriaLocks();
+            minigamesMenu.classList.add('show');
+            gameContainer.classList.add('menu-open');
+        }
+
+        function showInstant(text) {
+            dialogueTextElement.innerHTML = text;
+            openMenu();
+        }
+
+        let typingDone = false;
+        let skipTyping = false;
+
+        function typeWriter(text) {
+            typingDone = false;
+            skipTyping = false;
+            let index = 0;
+            let str   = '';
+
+            function tick() {
+                if (skipTyping) {
+                    dialogueTextElement.innerHTML = text;
+                    typingDone = true;
+                    openMenu();
+                    return;
+                }
+
+                if (index < text.length) {
+                    str += text[index];
+                    dialogueTextElement.innerHTML = str + '<span class="cursor"></span>';
+                    index++;
+                    setTimeout(tick, 50);
+                } else {
+                    dialogueTextElement.innerHTML = str;
+                    typingDone = true;
+                    // ¿Hay que ir a la batalla final?
+                    const _mode      = sessionStorage.getItem('jugueton_mode') || 'clasico';
+                    const _completed = getCompletedGames();
+                    const _allDone   = _completed.length >= TOTAL_GAMES;
+                    const _bossBeaten = !!localStorage.getItem('finalBattleDefeated');
+                    if (_mode === 'historia' && _allDone && !_bossBeaten) {
+                        setTimeout(() => { window.location.href = 'TheFinalBattle.html'; }, 1800);
+                    } else {
+                        setTimeout(openMenu, 400);
+                    }
+                }
+            }
+
+            setTimeout(tick, 500);
+        }
+
+        // Saltar con Espacio mientras Juguetón escribe
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !typingDone) {
+                e.preventDefault();
+                skipTyping = true;
+            }
+        });
+
+        document.querySelectorAll('.minigame-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!btn.classList.contains('locked')) {
+                    sessionStorage.setItem(SESSION_KEY, '1');
+                }
+            });
+        });
+
+        // ── Volver a la selección de modo ──
+        function goBackToModeSelect() {
+            minigamesMenu.classList.remove('show');
+            gameContainer.classList.remove('menu-open');
+            sessionStorage.removeItem('jugueton_mode');
+            sessionStorage.removeItem(SESSION_KEY);
+            dialogueTextElement.innerHTML = '';
+            const modeScr = document.getElementById('modeSelectScreen');
+            modeScr.style.display = '';
+            // pequeña pausa para que el display none no bloquee la transición
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    modeScr.classList.remove('hide');
+                });
+            });
+        }
+
+        // ── Pantalla de selección de modo ──
+        const modeScreen = document.getElementById('modeSelectScreen');
+
+        // Estrellas animadas de fondo
+        (function initStars() {
+            const canvas = document.getElementById('starsCanvas');
+            const ctx    = canvas.getContext('2d');
+            canvas.width  = 1280;
+            canvas.height = 720;
+            const stars = Array.from({ length: 120 }, () => ({
+                x: Math.random() * 1280,
+                y: Math.random() * 720,
+                r: Math.random() * 1.8 + 0.3,
+                a: Math.random(),
+                speed: Math.random() * 0.008 + 0.003
+            }));
+            function draw() {
+                ctx.clearRect(0, 0, 1280, 720);
+                stars.forEach(s => {
+                    s.a += s.speed;
+                    const alpha = (Math.sin(s.a) + 1) / 2 * 0.8 + 0.1;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+                    ctx.fill();
+                });
+                requestAnimationFrame(draw);
+            }
+            draw();
+        })();
+
+        function selectMode(mode) {
+            sessionStorage.setItem('jugueton_mode', mode);
+            modeScreen.classList.add('hide');
+            setTimeout(() => {
+                modeScreen.style.display = 'none';
+                typeWriter(DIALOGUE_INTRO);
+            }, 600);
+        }
+
+        window.addEventListener('load', () => {
+            const returning = sessionStorage.getItem(SESSION_KEY);
+            if (returning) {
+                sessionStorage.removeItem(SESSION_KEY);
+                // Vuelve de un minijuego: saltar pantalla de modo
+                modeScreen.style.display = 'none';
+                const returnDialogue = buildReturnDialogue();
+
+                const _mode       = sessionStorage.getItem('jugueton_mode') || 'clasico';
+                const _completed  = getCompletedGames();
+                const _allDone    = _completed.length >= TOTAL_GAMES;
+                const _bossBeaten = !!localStorage.getItem('finalBattleDefeated');
+                if (_mode === 'historia' && _allDone && !_bossBeaten) {
+                    typeWriter(returnDialogue);
+                } else {
+                    showInstant(returnDialogue);
+                }
+            }
+            // Si no viene de un minijuego, la pantalla de modo ya está visible
+        });
+    
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+
+// ── TOUCH → SPACE ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var wrapper = document.getElementById('wrapper');
+    var tc      = document.getElementById('touchControls'); // puede ser null
+    wrapper.addEventListener('touchstart', function(e){
+        if (tc && tc.contains(e.target)) return; // ignora botones direccionales
+        document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));
+    }, {passive:true});
+    wrapper.addEventListener('touchend', function(e){
+        if (tc && tc.contains(e.target)) return;
+        document.dispatchEvent(new KeyboardEvent('keyup',{code:'Space',bubbles:true}));
+    }, {passive:true});
+})();
+
+</script>
+</body>
+</html>

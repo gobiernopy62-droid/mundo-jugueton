@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Ten Cuidado, Portal!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        #wrapper {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* ── OVERLAYS ── */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.78);
+            z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+
+        .panel {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
+            border: 4px solid #fbbf24;
+            border-radius: 20px;
+            padding: 36px 44px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(251,191,36,0.3);
+            text-align: center;
+        }
+
+        .panel h1 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251,191,36,0.6);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .panel .subtitle {
+            color: #a5b4fc;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .tut-item {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e0e7ff;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .tut-item span.key {
+            display: inline-block;
+            background: #fbbf24;
+            color: #1e1b4b;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 1px 8px;
+            font-size: 14px;
+            margin-right: 4px;
+        }
+
+        .tut-item .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+        .btn-play {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 48px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 1px;
+        }
+        .btn-play:hover {
+            transform: scale(1.06);
+            box-shadow: 0 8px 28px rgba(251,191,36,0.6);
+        }
+
+        /* ── GAME OVER ── */
+        #goScore { font-size: 28px; color: #a5b4fc; margin: 12px 0 24px; }
+        #goScore span { color: #fbbf24; font-weight: 700; font-size: 36px; }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+            transition: transform 0.15s;
+            margin-right: 12px;
+        }
+        .btn-retry:hover { transform: scale(1.06); }
+
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .btn-back:hover { transform: scale(1.06); }
+
+        /* ── PAUSA ── */
+        #pauseBtn {
+            position: absolute;
+            top: 52px;
+            right: 12px;
+            z-index: 5;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #fbbf24;
+            border-radius: 10px;
+            color: #fbbf24;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: none;
+        }
+        #pauseBtn:hover { background: rgba(251,191,36,0.2); transform: scale(1.08); }
+        #pauseBtn.visible { display: block; }
+
+        .pause-panel h2 {
+            font-size: 34px;
+            color: #fbbf24;
+            margin-bottom: 28px;
+            text-shadow: 0 0 16px rgba(251,191,36,0.5);
+        }
+        .pause-panel .btn-resume {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 44px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .pause-panel .btn-resume:hover { transform: scale(1.05); }
+        .pause-panel .btn-quit {
+            background: rgba(255,255,255,0.1);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 10px 44px;
+            cursor: pointer;
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+        }
+        .pause-panel .btn-quit:hover { transform: scale(1.05); }
+
+        /* ── Victoria (Modo Historia) ── */
+        #victoryOverlay {
+            background: radial-gradient(ellipse at center, #1a1a4e 0%, #0a0a1e 100%);
+        }
+        #victoryOverlay .panel {
+            text-align: center;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        #victoryOverlay .panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .victory-title {
+            font-size: 64px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 40px rgba(251,191,36,0.8), 0 4px 16px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+            animation: victoryPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes victoryPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .victory-sub {
+            font-size: 22px;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 28px;
+        }
+        #victoryScore {
+            font-size: 28px;
+            color: white;
+            margin-bottom: 36px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 14px;
+            padding: 14px 28px;
+            display: inline-block;
+        }
+        #victoryScore span {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        .btn-victory {
+            background: linear-gradient(135deg, #7c3aed, #be185d);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 16px 40px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+        }
+        .btn-victory:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(124,58,237,0.6);
+        }
+        /* Confetti stars */
+        .confetti-star {
+            position: absolute;
+            font-size: 20px;
+            animation: floatStar 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes floatStar {
+            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- TUTORIAL -->
+    <div class="overlay" id="tutorialOverlay">
+        <div class="panel">
+            <h1>📱 ¡Ten Cuidado, Portal!</h1>
+            <p class="subtitle">¡Aplasta a Portal Mujer con el Martillo antes de que se teletransporte!</p>
+
+            <div class="tutorial-grid">
+                <div class="tut-item">
+                    <span class="icon">⬅️➡️</span>
+                    <span class="key">A</span> / <span class="key">◀</span> Mover izquierda<br>
+                    <span class="key">D</span> / <span class="key">▶</span> Mover derecha
+                </div>
+                <div class="tut-item">
+                    <span class="icon">💥</span>
+                    <span class="key">Espacio</span><br>
+                    ¡Aplasta con el Martillo!
+                </div>
+                <div class="tut-item">
+                    <span class="icon">📱</span>
+                    Portal Mujer aparece en <strong>3 lugares</strong>: izquierda, centro o derecha. ¡Siempre pegada al celu!
+                </div>
+                <div class="tut-item">
+                    <span class="icon">💔</span>
+                    Si aplastas en el <strong>lugar equivocado</strong> mientras ella está visible, <strong>pierdes una vida</strong>.
+                </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:12px 14px;color:#e0e7ff;font-size:15px;margin-bottom:20px;line-height:1.7;text-align:left;">
+                ❤️ Tienes <strong>3 vidas</strong>.<br>
+                ⚡ Con el tiempo se teletransportará <strong>cada vez más rápido</strong>. ¡No la pierdas de vista!
+            </div>
+
+            <button class="btn-play" id="btnPlay">¡Jugar!</button>
+        </div>
+    </div>
+
+    <!-- BOTÓN PAUSA -->
+    <button id="pauseBtn">⏸ Pausa</button>
+
+    <!-- PAUSA OVERLAY -->
+    <div class="overlay hidden" id="pauseOverlay">
+        <div class="panel pause-panel">
+            <h2>⏸ Juego en Pausa</h2>
+            <button class="btn-resume" id="btnResume">▶ Continuar</button>
+            <button class="btn-quit" id="btnQuitPause">← Volver al menú</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay hidden" id="gameOverOverlay">
+        <div class="panel">
+            <h1>💀 ¡Game Over!</h1>
+            <div id="goScore">Aplastadas: <span id="finalScore">0</span></div>
+            <button class="btn-retry" id="btnRetry">🔄 Reintentar</button>
+            <button class="btn-back" id="btnBack">← Volver</button>
+        </div>
+    </div>
+
+    <!-- VICTORIA (Modo Historia) -->
+    <div class="overlay hidden" id="victoryOverlay">
+        <div class="panel">
+            <span class="confetti-star" style="left:10%;bottom:5%;animation-delay:0.0s;animation-duration:2.5s">⭐</span><span class="confetti-star" style="left:25%;bottom:8%;animation-delay:0.4s;animation-duration:3.0s">✨</span><span class="confetti-star" style="left:40%;bottom:3%;animation-delay:0.8s;animation-duration:2.8s">🌟</span><span class="confetti-star" style="left:60%;bottom:6%;animation-delay:0.2s;animation-duration:3.2s">⭐</span><span class="confetti-star" style="left:75%;bottom:9%;animation-delay:0.6s;animation-duration:2.6s">✨</span><span class="confetti-star" style="left:88%;bottom:4%;animation-delay:1.0s;animation-duration:3.0s">🌟</span><span class="confetti-star" style="left:50%;bottom:12%;animation-delay:0.3s;animation-duration:2.9s">⭐</span><span class="confetti-star" style="left:18%;bottom:15%;animation-delay:0.7s;animation-duration:3.1s">✨</span><span class="confetti-star" style="left:82%;bottom:11%;animation-delay:0.1s;animation-duration:2.7s">🌟</span>
+            <div class="victory-title">🏆 ¡Victoria! 🏆</div>
+            <div class="victory-sub" id="victorySubtitle">¡Lo lograste!</div>
+            <div id="victoryScore">Puntaje obtenido: <span id="victoryScoredNum">0</span></div>
+            <button class="btn-victory" id="btnVictory">🎮 Volver al menú</button>
+        </div>
+    </div>
+    <!-- CONTROLES TÁCTILES -->
+    <div id="touchControls" style="display:none;position:absolute;bottom:20px;left:0;width:100%;z-index:30;pointer-events:none;justify-content:space-between;align-items:flex-end;padding:0 28px;box-sizing:border-box;">
+        <button id="btnTouchLeft"  style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">◀</button>
+        <button id="btnTouchRight" style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">▶</button>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  ¡TEN CUIDADO, PORTAL! — Motor de juego
+// ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  MODO HISTORIA — Configuración
+// ═══════════════════════════════════════════════════
+const GAME_KEY   = 'tenCuidadoPortal';
+const GAME_NAME  = 'Portal Molesta';
+const WIN_SCORE  = 25;
+const HISTORIA_COMPLETED_KEY = 'historia_completed';
+const SESSION_GAME_KEY = 'jugueton_came_from_minigame';
+
+function isHistoriaMode() {
+    return sessionStorage.getItem('jugueton_mode') === 'historia';
+}
+
+function checkWin() {
+    if (!isHistoriaMode()) return;
+    if (state.score >= WIN_SCORE) {
+        triggerVictory();
+    }
+}
+
+function triggerVictory() {
+    if (state._victoryTriggered) return;
+    state._victoryTriggered = true;
+    state.running = false;
+
+    let completed = JSON.parse(localStorage.getItem(HISTORIA_COMPLETED_KEY) || '[]');
+    if (!completed.includes(GAME_KEY)) {
+        completed.push(GAME_KEY);
+        localStorage.setItem(HISTORIA_COMPLETED_KEY, JSON.stringify(completed));
+    }
+    sessionStorage.setItem('jugueton_last_win', GAME_NAME);
+    sessionStorage.setItem(SESSION_GAME_KEY, '1');
+
+    document.getElementById('victoryScoredNum').textContent = state.score;
+    const totalGames = 6;
+    const remaining  = totalGames - completed.length;
+    document.getElementById('victorySubtitle').textContent =
+        remaining === 0
+        ? '¡Completaste todos los minijuegos! 🎉'
+        : `¡Te quedan ${remaining} minijuego${remaining === 1 ? '' : 's'} por completar!`;
+    document.getElementById('victoryOverlay').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnV = document.getElementById('btnVictory');
+    if (btnV) btnV.addEventListener('click', () => { window.location.href = 'index.html'; });
+});
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const W = 1280, H = 720;
+
+// ── Escala de sprites (píxeles de sprite → píxeles en pantalla) ──
+const SCALE = 4;
+
+// ── Tamaños escalados ──
+const HAMMER_W = 64 * SCALE;   // 256  (Martillo.png:  64×9  sprite)
+const HAMMER_H =  9 * SCALE;   //  36
+const PORTAL_W = 18 * SCALE;   //  72  (PortalMujer.png: 9×12 sprite — dimensiones duplicadas)
+const PORTAL_H = 24 * SCALE;   //  96
+const SQUISH_W = 64 * SCALE;   // 256  (PortalMujerAplastada.png: 64×9 sprite)
+const SQUISH_H =  9 * SCALE;   //  36
+const PHONE_W  =  6 * SCALE;   //  24  (Celular.png: 6×9 sprite)
+const PHONE_H  =  9 * SCALE;   //  36
+
+// ── 3 posiciones (X central de cada zona) ──
+const POSITIONS = [272, 640, 1008];
+
+// ── Y de referencia para Portal Mujer (sus pies) ──
+const GROUND_Y = H - 90;
+
+// ── Y del martillo ──
+const HAMMER_REST_Y = 290;
+const HAMMER_SLAM_Y = GROUND_Y - PORTAL_H - HAMMER_H + 18; // toca a Portal al llegar
+
+// ── Timing de aparición ──
+const APPEAR_START  = 130;  // frames de visibilidad inicial (~2.2 s a 60fps)
+const APPEAR_MIN    =  35;  // frames de visibilidad mínimo (~0.6 s)
+const SPEED_SCALE_DURATION = 3600; // frames hasta velocidad máxima (~60 s)
+
+// ── Constantes de animación ──
+const SLAM_SPD_DOWN = 44;
+const SLAM_SPD_UP   = 22;
+const MAX_LIVES     = 3;
+
+// ── Imágenes ──
+function img(src) { const i = new Image(); i.src = src; return i; }
+const imgs = {
+    bg:     img('Montañas.png'),
+    hammer: img('Martillo.png'),
+    portal: img('PortalMujer.png'),
+    squish: img('PortalMujerAplastada.png'),
+    phone:  img('Celular.png'),
+};
+
+// ── Estado global ──
+let state  = {};
+let paused = false;
+
+// ─────────────────────────────────────────────────
+//  RESET
+// ─────────────────────────────────────────────────
+function resetState() {
+    state = {
+        running:     false,
+        score:       0,
+        lives:       MAX_LIVES,
+        elapsed:     0,
+
+        // Martillo
+        hammerPos:    1,          // 0 = izq, 1 = centro, 2 = der
+        hammerX:      POSITIONS[1], // posición X animada (píxeles)
+        hammerY:      HAMMER_REST_Y,
+        slamming:     false,
+        slamPhase:   'none',     // 'none' | 'down' | 'up'
+        slamY:        HAMMER_REST_Y,
+        slamCooldown: 0,
+        moveCooldown: 0,
+
+        // Portal Mujer
+        portalPos:    Math.floor(Math.random() * 3),
+        portalVisible: true,
+        appearTimer:  APPEAR_START,
+
+        // Aplastada
+        squishTimer:  0,
+        squishPos:    0,
+
+        // Flash de teletransporte
+        flashTimer:   0,
+        flashVisible: true,
+
+        // Efectos
+        shakeTimer:   0,
+        hitFlash:     0,  // flash dorado en acierto
+
+        // Input
+        keys:         {},
+    };
+}
+
+// ─────────────────────────────────────────────────
+//  UPDATE
+// ─────────────────────────────────────────────────
+function update() {
+    if (!state.running) return;
+    state.elapsed++;
+
+    // ── Mover martillo (solo cuando no está en pleno slam) ──
+    if (state.moveCooldown > 0) state.moveCooldown--;
+    if (!state.slamming) {
+        const goLeft  = state.keys['KeyA'] || state.keys['ArrowLeft'];
+        const goRight = state.keys['KeyD'] || state.keys['ArrowRight'];
+        if (goLeft  && state.hammerPos > 0 && state.moveCooldown === 0) {
+            state.hammerPos--;
+            state.moveCooldown = 8;
+        }
+        if (goRight && state.hammerPos < 2 && state.moveCooldown === 0) {
+            state.hammerPos++;
+            state.moveCooldown = 8;
+        }
+    }
+
+    // ── Animación de deslizamiento horizontal del martillo ──
+    const HAMMER_MOVE_SPD = 28;
+    const targetX = POSITIONS[state.hammerPos];
+    if (state.hammerX < targetX) {
+        state.hammerX = Math.min(state.hammerX + HAMMER_MOVE_SPD, targetX);
+    } else if (state.hammerX > targetX) {
+        state.hammerX = Math.max(state.hammerX - HAMMER_MOVE_SPD, targetX);
+    }
+
+    // ── Iniciar slam ──
+    if (state.slamCooldown > 0) state.slamCooldown--;
+    if (state.keys['Space'] && !state.slamming && state.slamCooldown === 0) {
+        state.slamming  = true;
+        state.slamPhase = 'down';
+        state.slamY     = state.hammerY;
+    }
+
+    // ── Animación del slam ──
+    if (state.slamPhase === 'down') {
+        state.slamY += SLAM_SPD_DOWN;
+        state.hammerY = state.slamY;
+
+        if (state.slamY >= HAMMER_SLAM_Y) {
+            state.hammerY = HAMMER_SLAM_Y;
+            state.slamY   = HAMMER_SLAM_Y;
+
+            // ¿Hay colisión?
+            if (state.portalVisible && state.flashVisible) {
+                if (state.hammerPos === state.portalPos) {
+                    // ── ¡Acierto! ──
+                    state.score++;
+                    checkWin();
+                    state.hitFlash    = 18;
+                    state.squishTimer = 40;
+                    state.squishPos   = state.portalPos;
+                    state.portalVisible = false;
+                    state.appearTimer   = 0;
+                } else {
+                    // ── Fallo (posición incorrecta mientras es visible) ──
+                    loseLife();
+                    if (!state.running) return;
+                }
+            }
+            // Si no es visible, el golpe no hace nada (no se penaliza)
+
+            state.slamPhase = 'up';
+        }
+    } else if (state.slamPhase === 'up') {
+        state.slamY -= SLAM_SPD_UP;
+        state.hammerY = state.slamY;
+
+        if (state.slamY <= HAMMER_REST_Y) {
+            state.hammerY   = HAMMER_REST_Y;
+            state.slamY     = HAMMER_REST_Y;
+            state.slamPhase = 'none';
+            state.slamming  = false;
+            state.slamCooldown = 6;
+        }
+    }
+
+    // ── Cuenta regresiva de la "aplastada" ──
+    if (state.squishTimer > 0) {
+        state.squishTimer--;
+        if (state.squishTimer === 0) teleportPortal();
+    }
+
+    // ── Cuenta regresiva de visibilidad ──
+    if (state.portalVisible) {
+        state.appearTimer--;
+        if (state.appearTimer <= 0) teleportPortal(); // escapó sin ser aplastada
+    }
+
+    // ── Flash de teletransporte ──
+    if (state.flashTimer > 0) {
+        state.flashTimer--;
+        state.flashVisible = (state.flashTimer % 4 < 2);
+        if (state.flashTimer === 0) state.flashVisible = true;
+    }
+
+    // ── Efectos de UI ──
+    if (state.shakeTimer > 0) state.shakeTimer--;
+    if (state.hitFlash   > 0) state.hitFlash--;
+}
+
+function loseLife() {
+    state.lives--;
+    state.shakeTimer = 28;
+    if (state.lives <= 0) {
+        endGame();
+    }
+}
+
+function teleportPortal() {
+    // Elige una posición diferente a la actual (la mayoría de las veces)
+    let newPos;
+    do { newPos = Math.floor(Math.random() * 3); }
+    while (newPos === state.portalPos && Math.random() > 0.25);
+
+    state.portalPos     = newPos;
+    state.portalVisible = true;
+    state.flashTimer    = 16;
+    state.flashVisible  = false;
+
+    // Tiempo de visibilidad según dificultad acumulada
+    const t = Math.min(state.elapsed / SPEED_SCALE_DURATION, 1);
+    state.appearTimer = Math.round(APPEAR_START - t * (APPEAR_START - APPEAR_MIN));
+}
+
+// ─────────────────────────────────────────────────
+//  DRAW
+// ─────────────────────────────────────────────────
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Screen shake ──
+    let sx = 0, sy = 0;
+    if (state.shakeTimer > 0) {
+        const amp = 8 * (state.shakeTimer / 28);
+        sx = (Math.random() - 0.5) * amp * 2;
+        sy = (Math.random() - 0.5) * amp;
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // ── Fondo ──
+    if (imgs.bg.complete && imgs.bg.naturalWidth > 0) {
+        ctx.drawImage(imgs.bg, 0, 0, W, H);
+    } else {
+        // Fallback: fondo degradado con marcadores de zona
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0,   '#1a0535');
+        g.addColorStop(0.6, '#2d1b4e');
+        g.addColorStop(1,   '#0f0020');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+
+        // Marcadores de zona (suelo)
+        for (let i = 0; i < 3; i++) {
+            const px = POSITIONS[i];
+            ctx.fillStyle = 'rgba(251,191,36,0.08)';
+            ctx.fillRect(px - HAMMER_W / 2, 0, HAMMER_W, H);
+            ctx.strokeStyle = 'rgba(251,191,36,0.18)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([8, 6]);
+            ctx.beginPath();
+            ctx.moveTo(px, 44);
+            ctx.lineTo(px, H);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // "Suelo"
+        ctx.fillStyle = '#3b1f6b';
+        ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(0, GROUND_Y, W, 3);
+    }
+
+    // ── Sprite de aplastada ──
+    if (state.squishTimer > 0) {
+        const sx2 = POSITIONS[state.squishPos] - SQUISH_W / 2;
+        const sy2 = GROUND_Y - SQUISH_H;
+        if (imgs.squish.complete && imgs.squish.naturalWidth > 0) {
+            ctx.drawImage(imgs.squish, sx2, sy2, SQUISH_W, SQUISH_H);
+        } else {
+            ctx.fillStyle = '#f87171';
+            ctx.fillRect(sx2, sy2, SQUISH_W, SQUISH_H);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.fillText('💥 APLASTADA 💥', sx2 + SQUISH_W / 2, sy2 + SQUISH_H / 2 + 8);
+        }
+    }
+
+    // ── Portal Mujer (solo si está visible y el flash lo permite) ──
+    if (state.portalVisible && state.flashVisible) {
+        const px = POSITIONS[state.portalPos] - PORTAL_W / 2;
+        const py = GROUND_Y - PORTAL_H;
+
+        if (imgs.portal.complete && imgs.portal.naturalWidth > 0) {
+            ctx.drawImage(imgs.portal, px, py, PORTAL_W, PORTAL_H);
+        } else {
+            ctx.fillStyle = '#be185d';
+            ctx.fillRect(px, py, PORTAL_W, PORTAL_H);
+            ctx.fillStyle = 'white';
+            ctx.font = '26px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('👩', px + PORTAL_W / 2, py + PORTAL_H / 2 + 8);
+        }
+
+        // Celular al lado de Portal Mujer
+        const phonePx = px + PORTAL_W + 2;
+        const phonePy = py + (PORTAL_H / 2) - (PHONE_H / 2);
+        if (imgs.phone.complete && imgs.phone.naturalWidth > 0) {
+            ctx.drawImage(imgs.phone, phonePx, phonePy, PHONE_W, PHONE_H);
+        } else {
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(phonePx, phonePy, PHONE_W, PHONE_H);
+            ctx.fillStyle = '#60a5fa';
+            ctx.fillRect(phonePx + 2, phonePy + 3, PHONE_W - 4, PHONE_H - 6);
+            ctx.fillStyle = 'white';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('📱', phonePx + PHONE_W / 2, phonePy + PHONE_H / 2 + 4);
+        }
+    }
+
+    // ── Martillo ──
+    const hx = state.hammerX - HAMMER_W / 2;
+    const hy = state.hammerY;
+
+    if (imgs.hammer.complete && imgs.hammer.naturalWidth > 0) {
+        ctx.drawImage(imgs.hammer, hx, hy, HAMMER_W, HAMMER_H);
+    } else {
+        // Fallback visual
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(hx, hy, HAMMER_W * 0.6, HAMMER_H);
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(hx + HAMMER_W * 0.6, hy - 4, HAMMER_W * 0.4, HAMMER_H + 8);
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 16px Fredoka';
+        ctx.textAlign = 'center';
+        ctx.fillText('🔨 MARTILLO', hx + HAMMER_W / 2, hy + HAMMER_H / 2 + 6);
+    }
+
+    // ── Flash dorado en acierto ──
+    if (state.hitFlash > 0) {
+        ctx.fillStyle = `rgba(251,191,36,${0.25 * (state.hitFlash / 18)})`;
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore(); // fin del screen shake
+
+    drawHUD();
+}
+
+function drawHUD() {
+    // Barra superior
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, 44);
+
+    // Puntuación
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px Fredoka';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🔨 ${state.score}`, 16, 30);
+
+    // Posición actual del martillo
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Fredoka';
+    const posNames = ['⬅ Izquierda', '⬛ Centro', '➡ Derecha'];
+    ctx.fillText(posNames[state.hammerPos], W / 2, 30);
+
+    // Vidas
+    ctx.textAlign = 'right';
+    ctx.font = '22px Fredoka';
+    let hearts = '';
+    for (let i = 0; i < MAX_LIVES; i++) hearts += (i < state.lives) ? '❤️ ' : '🖤 ';
+    ctx.fillText(hearts.trim(), W - 16, 30);
+
+    // Velocidad actual
+    const t = Math.min(state.elapsed / SPEED_SCALE_DURATION, 1);
+    ctx.textAlign = 'left';
+    ctx.font = '16px Fredoka';
+    ctx.fillStyle = t < 0.5 ? '#4ade80' : t < 0.8 ? '#fbbf24' : '#f87171';
+    ctx.fillText(`⚡ Vel. ${Math.round(t * 100)}%`, 16, H - 10);
+
+    // Indicadores visuales de las 3 zonas en el HUD (puntos en la barra)
+    const zoneY = 38;
+    for (let i = 0; i < 3; i++) {
+        const zx = POSITIONS[i];
+        ctx.fillStyle = (i === state.hammerPos) ? '#fbbf24' : 'rgba(255,255,255,0.25)';
+        ctx.beginPath();
+        ctx.arc(zx, zoneY, 5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// ─────────────────────────────────────────────────
+//  GAME LOOP
+// ─────────────────────────────────────────────────
+function loop() {
+    if (!state.running || paused) return;
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+// ─────────────────────────────────────────────────
+//  INICIO / FIN / PAUSA
+// ─────────────────────────────────────────────────
+function startGame() {
+    resetState();
+    paused = false;
+    state.running = true;
+    document.getElementById('pauseBtn').classList.add('visible');
+    document.getElementById('pauseBtn').textContent = '⏸ Pausa';
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    // Primer teletransporte con flash
+    state.flashTimer   = 14;
+    state.flashVisible = false;
+    requestAnimationFrame(loop);
+}
+
+function endGame() {
+    state.running = false;
+    paused = false;
+    document.getElementById('pauseBtn').classList.remove('visible');
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('finalScore').textContent = state.score;
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+    // ── Guardar mejor puntaje ──
+    const _prevTC = parseInt(localStorage.getItem('score_tenCuidadoPortal') || '0');
+    if (state.score > _prevTC) localStorage.setItem('score_tenCuidadoPortal', state.score);
+    draw();
+}
+
+function togglePause() {
+    paused = !paused;
+    const overlay = document.getElementById('pauseOverlay');
+    const btn     = document.getElementById('pauseBtn');
+    if (paused) {
+        overlay.classList.remove('hidden');
+        btn.textContent = '▶ Reanudar';
+    } else {
+        overlay.classList.add('hidden');
+        btn.textContent = '⏸ Pausa';
+        requestAnimationFrame(loop);
+    }
+}
+
+// ─────────────────────────────────────────────────
+//  INPUT
+// ─────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (state.keys[e.code]) return; // evita repetición de teclas mantenidas para movimiento
+    state.keys[e.code] = true;
+
+    if ((e.code === 'Escape' || e.code === 'KeyP') && state.running) {
+        e.preventDefault();
+        togglePause();
+    }
+    if (['ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { state.keys[e.code] = false; });
+
+// ─────────────────────────────────────────────────
+//  BOTONES UI
+// ─────────────────────────────────────────────────
+document.getElementById('btnPlay').addEventListener('click', () => {
+    document.getElementById('tutorialOverlay').classList.add('hidden');
+    startGame();
+});
+document.getElementById('btnRetry').addEventListener('click', () => {
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    startGame();
+});
+document.getElementById('btnBack').addEventListener('click', () => history.back());
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+document.getElementById('btnResume').addEventListener('click', togglePause);
+document.getElementById('btnQuitPause').addEventListener('click', () => {
+    state.running = false;
+    paused = false;
+    history.back();
+});
+
+// Dibujar fondo mientras el jugador lee el tutorial
+imgs.bg.onload = () => { ctx.drawImage(imgs.bg, 0, 0, W, H); };
+
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+
+// ── TOUCH CONTROLS (◀ ▶) ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var tc = document.getElementById('touchControls');
+    tc.style.display = 'flex';
+    function bind(id, code){
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart',  function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keydown',{code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchend',    function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchcancel', function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+    }
+    bind('btnTouchLeft',  'ArrowLeft');
+    bind('btnTouchRight', 'ArrowRight');
+})();
+
+
+// ── TOUCH → SPACE ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var wrapper = document.getElementById('wrapper');
+    var tc      = document.getElementById('touchControls'); // puede ser null
+    wrapper.addEventListener('touchstart', function(e){
+        if (tc && tc.contains(e.target)) return; // ignora botones direccionales
+        document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));
+    }, {passive:true});
+    wrapper.addEventListener('touchend', function(e){
+        if (tc && tc.contains(e.target)) return;
+        document.dispatchEvent(new KeyboardEvent('keyup',{code:'Space',bubbles:true}));
+    }, {passive:true});
+})();
+
+</script>
+</body>
+</html>

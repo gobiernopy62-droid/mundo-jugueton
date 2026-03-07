@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>La Batalla Final</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    #wrapper {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+    }
+
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    /* ── OVERLAY BASE ── */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.78);
+      z-index: 10;
+    }
+    .overlay.hidden { display: none; }
+
+    /* ── PANEL BASE ── */
+    .panel {
+      background: linear-gradient(145deg, #1e1b4b, #312e81);
+      border: 4px solid #fbbf24;
+      border-radius: 20px;
+      padding: 36px 44px;
+      max-width: 520px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(251,191,36,0.3);
+      text-align: center;
+    }
+
+    .panel h1 {
+      font-size: 38px;
+      font-weight: 700;
+      color: #fbbf24;
+      text-shadow: 0 0 20px rgba(251,191,36,0.6);
+      margin-bottom: 6px;
+    }
+
+    .panel .subtitle {
+      color: #a5b4fc;
+      font-size: 18px;
+      margin-bottom: 28px;
+    }
+
+    .btn-retry {
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      color: white;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 40px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+      transition: transform 0.15s;
+    }
+    .btn-retry:hover { transform: scale(1.06); }
+
+    /* ── PAUSA ── */
+    #pauseBtn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 5;
+      background: rgba(0,0,0,0.6);
+      border: 2px solid #fbbf24;
+      border-radius: 10px;
+      color: #fbbf24;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: none;
+    }
+    #pauseBtn:hover { background: rgba(251,191,36,0.2); transform: scale(1.08); }
+    #pauseBtn.visible { display: block; }
+
+    .pause-panel h2 {
+      font-size: 34px;
+      color: #fbbf24;
+      margin-bottom: 28px;
+      text-shadow: 0 0 16px rgba(251,191,36,0.5);
+    }
+
+    .btn-resume {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: #1e1b4b;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      padding: 12px 44px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+      transition: transform 0.15s;
+      display: block;
+      width: 100%;
+    }
+    .btn-resume:hover { transform: scale(1.05); }
+  </style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="c" width="1280" height="720"></canvas>
+
+  <!-- GAME OVER -->
+  <div class="overlay hidden" id="gameOverOverlay">
+    <div class="panel">
+      <h1>💀 Game Over</h1>
+      <p class="subtitle">¡Araña Jefe fue demasiado fuerte...</p>
+      <button class="btn-retry" id="btnRetry">🔄 Reintentar</button>
+    </div>
+  </div>
+
+  <!-- PAUSA -->
+  <div class="overlay hidden" id="pauseOverlay">
+    <div class="panel pause-panel">
+      <h2>⏸ Pausa</h2>
+      <button class="btn-resume" id="btnResume">▶ Reanudar</button>
+    </div>
+  </div>
+
+  <button id="pauseBtn">⏸ Pausa</button>
+    <!-- CONTROLES TÁCTILES -->
+    <div id="touchControls" style="display:none;position:absolute;bottom:20px;left:0;width:100%;z-index:30;pointer-events:none;justify-content:space-between;align-items:flex-end;padding:0 28px;box-sizing:border-box;">
+        <button id="btnTouchLeft"  style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">◀</button>
+        <button id="btnTouchRight" style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">▶</button>
+    </div>
+
+</div>
+
+<script>
+const C   = document.getElementById('c');
+const ctx = C.getContext('2d');
+const W = 1280, H = 720;
+const FLOOR_Y = 635;
+const GRAVITY = 0.65;
+const WALK    = 5;
+const JUMP    = -17;
+const SJUMP   = -25;
+
+// ── SPRITES ──
+const SPR = {};
+let loaded = 0;
+const sprMap = { player:'Personaje.png', boss:'ArañaJefe.png', ghost:'Fantasma.png', hammer:'Hammer.png', secuaz:'Secuaz.png', misil:'Misil.png', foop:'Foop.png' };
+Object.entries(sprMap).forEach(([k,src]) => {
+  SPR[k] = new Image();
+  SPR[k].onload = () => loaded++;
+  SPR[k].src = src;
+});
+
+// ── MÚSICA ──
+const bgm = new Audio('Megalovania.mp3');
+bgm.loop = true; bgm.volume = 0.55;
+bgm.play().catch(() => {});
+document.addEventListener('click', () => bgm.play().catch(() => {}), { once: true });
+
+// ── INPUT ──
+const K = {};
+addEventListener('keydown', e => {
+  const used = ['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD'];
+  if (used.includes(e.code)) e.preventDefault();
+  if (!K[e.code]) K[e.code + '_fresh'] = true;
+  K[e.code] = true;
+});
+addEventListener('keyup', e => { K[e.code] = false; K[e.code + '_fresh'] = false; });
+
+// ── REFERENCIAS DOM ──
+const pauseOverlay    = document.getElementById('pauseOverlay');
+const pauseBtn        = document.getElementById('pauseBtn');
+const btnResume       = document.getElementById('btnResume');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const btnRetry        = document.getElementById('btnRetry');
+
+// ── PAUSA ──
+let paused = false;
+function togglePause() {
+  if (gState !== 'play') return;
+  paused = !paused;
+  if (paused) {
+    pauseOverlay.classList.remove('hidden');
+    pauseBtn.textContent = '▶ Reanudar';
+    bgm.pause();
+  } else {
+    pauseOverlay.classList.add('hidden');
+    pauseBtn.textContent = '⏸ Pausa';
+    bgm.play().catch(() => {});
+  }
+}
+
+pauseBtn.addEventListener('click', togglePause);
+btnResume.addEventListener('click', togglePause);
+btnRetry.addEventListener('click', () => location.reload());
+addEventListener('keydown', e => { if (e.code === 'KeyP') togglePause(); });
+
+// ── JUGADOR ──
+const P = {
+  x: 280, y: FLOOR_Y - 64, w: 64, h: 64,
+  vx: 0, vy: 0,
+  onGround: false,
+  facingRight: true,
+  lives: 3,
+  invMs: 0,
+  superJump: false,
+  jumpLock: false
+};
+
+// ── JEFE ──
+const BOSS_W = 160, BOSS_H = 160;
+const B = {
+  x: W / 2 - BOSS_W / 2,
+  y: 28,
+  w: BOSS_W, h: BOSS_H,
+  lives: 3,
+  shkMs: 0
+};
+
+// ── COLECCIONES ──
+let hammers   = [];
+let ghost     = null;
+let secuaz    = null;
+let particles = [];
+let missiles  = [];
+let foops     = [];
+
+// ── TEMBLOR ──
+let shkMs = 0, shkMag = 0;
+function doShake(mag, ms) { shkMag = mag; shkMs = ms; }
+
+// ── TIMERS ──
+let stompTimer   = 3500;
+let hammerTimer  = 7000;
+let ghostTimer   = 14000;
+let secuazTimer  = 9000;
+let misilTimer   = 6000 + Math.random() * 4000;
+let foopTimer    = 18000 + Math.random() * 5000;
+
+// ── PISOTÓN ──
+let stompPhase   = 'idle';
+let stompPhaseMs = 0;
+let stompDamaged = false;
+
+// ── ESTADO ──
+let gState    = 'play';
+let gStateMs  = 0;
+let fadeAlpha = 0;
+let lastT     = 0;
+
+// ── HELPERS ──
+function ov(ax,ay,aw,ah,bx,by,bw,bh) {
+  return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+}
+
+function hurtPlayer() {
+  if (P.invMs > 0) return;
+  P.lives = Math.max(0, P.lives - 1);
+  P.invMs = 1800;
+  doShake(9, 500);
+  if (P.lives <= 0) {
+    setTimeout(() => {
+      gState = 'over';
+      pauseBtn.classList.remove('visible');
+      gameOverOverlay.classList.remove('hidden');
+      bgm.pause();
+    }, 600);
+  }
+}
+
+function hurtBoss() {
+  if (B.lives <= 0) return;
+  B.lives--;
+  B.shkMs = 700;
+  P.superJump = false;
+  P.vy = -10;
+  if (B.lives <= 0) startExplosion();
+}
+
+function startExplosion() {
+  gState   = 'explode';
+  gStateMs = 0;
+  pauseBtn.classList.remove('visible');
+  bgm.pause();
+  const cx = B.x + B.w / 2, cy = B.y + B.h / 2;
+  const cols = ['#ff3333','#ff8800','#ffee00','#ee44ff','#44eeff','#ffffff','#ff88aa'];
+  for (let i = 0; i < 90; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 2 + Math.random() * 10;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - 2,
+      r: 4 + Math.random() * 18,
+      c: cols[Math.floor(Math.random() * cols.length)],
+      a: 1,
+      d: 0.010 + Math.random() * 0.012
+    });
+  }
+}
+
+// ── UPDATE ──
+function update(dt) {
+  if (paused || gState === 'over') return;
+
+  if (gState === 'explode') {
+    gStateMs += dt;
+    particles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.18;
+      p.a = Math.max(0, p.a - p.d);
+    });
+    particles = particles.filter(p => p.a > 0);
+    if (gStateMs > 2600) { gState = 'fade'; gStateMs = 0; }
+    return;
+  }
+
+  if (gState === 'fade') {
+    gStateMs += dt;
+    fadeAlpha = Math.min(1, gStateMs / 900);
+    if (gStateMs > 1300) {
+      gState = 'end'; gStateMs = 0;
+      localStorage.setItem('finalBattleDefeated', 'true');
+    }
+    return;
+  }
+
+  if (gState === 'end') {
+    gStateMs += dt;
+    if (gStateMs > 6000) {
+      sessionStorage.setItem('jugueton_came_from_minigame', '1');
+      window.location.href = 'index.html';
+    }
+    return;
+  }
+
+  if (gState !== 'play') return;
+
+  // Timers de ataques
+  stompTimer -= dt;
+  if (stompPhase === 'idle' && stompTimer <= 0) {
+    stompPhase   = 'warning';
+    stompPhaseMs = 1600;
+    stompTimer   = 5500 + Math.random() * 2000;
+  }
+  if (stompPhase === 'warning') {
+    stompPhaseMs -= dt;
+    if (stompPhaseMs <= 0) {
+      stompPhase   = 'active';
+      stompPhaseMs = 900;
+      stompDamaged = false;
+      doShake(11, 650);
+    }
+  }
+  if (stompPhase === 'active') {
+    stompPhaseMs -= dt;
+    if (!stompDamaged && P.onGround) { hurtPlayer(); stompDamaged = true; }
+    if (stompPhaseMs <= 0) stompPhase = 'idle';
+  }
+
+  hammerTimer -= dt;
+  if (hammerTimer <= 0) {
+    hammerTimer = 9000 + Math.random() * 3000;
+    for (let i = 0; i < 7; i++) {
+      hammers.push({ x: 40 + Math.random() * (W-88), y: -90 - i*110, w:48, h:48, vy: 3.5 + Math.random()*3.5 });
+    }
+  }
+
+  ghostTimer -= dt;
+  if (ghostTimer <= 0 && !ghost) {
+    ghostTimer = 13000 + Math.random() * 5000;
+    ghost = { x: -70, y: FLOOR_Y - 64, w: 64, h: 64 };
+  }
+
+  secuazTimer -= dt;
+  if (secuazTimer <= 0 && !secuaz) {
+    secuazTimer = 8000 + Math.random() * 4000;
+    // Aparece del lado contrario al jugador
+    const fromLeft = P.x > W / 2;
+    secuaz = { x: fromLeft ? -70 : W + 10, y: FLOOR_Y - 64, w: 64, h: 64, dir: fromLeft ? 1 : -1 };
+  }
+
+  if (shkMs > 0)   shkMs -= dt;
+  if (B.shkMs > 0) B.shkMs -= dt;
+  if (P.invMs > 0) P.invMs -= dt;
+
+  // Movimiento del jugador
+  const goL     = K['ArrowLeft']  || K['KeyA'];
+  const goR     = K['ArrowRight'] || K['KeyD'];
+  const jumping = K['Space'] || K['ArrowUp'];
+
+  P.vx = goL ? -WALK : (goR ? WALK : 0);
+  if (goL && !goR) P.facingRight = false;
+  if (goR && !goL) P.facingRight = true;
+
+  if (jumping && P.onGround) {
+    P.vy = JUMP; P.onGround = false;
+  }
+  if (!jumping) P.jumpLock = false;
+
+  P.vy = Math.min(P.vy + GRAVITY, 18);
+  P.x  = Math.max(0, Math.min(W - P.w, P.x + P.vx));
+  P.y += P.vy;
+
+  if (P.y + P.h >= FLOOR_Y) {
+    P.y = FLOOR_Y - P.h; P.vy = 0; P.onGround = true; P.superJump = false;
+  } else {
+    P.onGround = false;
+  }
+
+  // Martillos
+  hammers.forEach(h => {
+    h.y += h.vy;
+    if (!h.dead && ov(P.x,P.y,P.w,P.h, h.x,h.y,h.w,h.h)) { hurtPlayer(); h.dead = true; }
+    if (h.y > FLOOR_Y + 10) h.dead = true;
+  });
+  hammers = hammers.filter(h => !h.dead);
+
+  // Fantasma
+  if (ghost) {
+    ghost.x += 2.5;
+    if (ghost.x > W + 20) {
+      ghost = null;
+    } else if (ov(P.x,P.y,P.w,P.h, ghost.x,ghost.y,ghost.w,ghost.h)) {
+      const pBottom = P.y + P.h;
+      const gTop    = ghost.y;
+      if (P.vy > 0 && pBottom <= gTop + 24 && pBottom >= gTop - 4) {
+        P.vy = SJUMP; P.superJump = true; P.onGround = false; P.jumpLock = true; ghost = null;
+      } else {
+        hurtPlayer(); ghost = null;
+      }
+    }
+  }
+
+  // Secuaz: sigue al jugador
+  if (secuaz) {
+    // Actualiza dirección hacia el jugador
+    secuaz.dir = P.x + P.w/2 > secuaz.x + secuaz.w/2 ? 1 : -1;
+    secuaz.x += secuaz.dir * 2.2;
+
+    // Sale por los bordes → desaparece
+    if (secuaz.x > W + 80 || secuaz.x < -80) {
+      secuaz = null;
+    } else if (ov(P.x,P.y,P.w,P.h, secuaz.x,secuaz.y,secuaz.w,secuaz.h)) {
+      const pBottom = P.y + P.h;
+      const sTop    = secuaz.y;
+      // Saltar encima = matarlo (sin boost)
+      if (P.vy > 0 && pBottom <= sTop + 24 && pBottom >= sTop - 4) {
+        P.vy = -8; // rebote pequeño, sin superJump
+        secuaz = null;
+      } else {
+        hurtPlayer(); secuaz = null;
+      }
+    }
+  }
+
+  // Golpe al jefe
+  if (P.superJump && B.lives > 0 && ov(P.x,P.y,P.w,P.h, B.x,B.y,B.w,B.h)) {
+    hurtBoss();
+  }
+
+  // ── Misiles ──
+  const MISIL_W = 96, MISIL_H = 42;
+  misilTimer -= dt;
+  if (misilTimer <= 0) {
+    misilTimer = 5000 + Math.random() * 5000;
+    // Altura aleatoria, siempre sobre el suelo (nunca toca el piso)
+    const yMin = 80;
+    const yMax = FLOOR_Y - MISIL_H - 30;
+    missiles.push({ x: -MISIL_W, y: yMin + Math.random() * (yMax - yMin), w: MISIL_W, h: MISIL_H });
+  }
+  missiles.forEach(m => { m.x += 7; });
+  missiles = missiles.filter(m => {
+    if (m.x > W + 20) return false;
+    if (ov(P.x,P.y,P.w,P.h, m.x,m.y,m.w,m.h)) { hurtPlayer(); return false; }
+    return true;
+  });
+
+  // ── Foops ──
+  const FOOP_W = 96, FOOP_H = 66;
+  foopTimer -= dt;
+  if (foopTimer <= 0 && foops.length === 0) {
+    foopTimer = 14000 + Math.random() * 6000;
+    const fromLeft = P.x > W / 2;
+    foops.push({ x: fromLeft ? -FOOP_W : W + 10, y: FLOOR_Y - FOOP_H, w: FOOP_W, h: FOOP_H, dir: fromLeft ? 1 : -1 });
+  }
+  foops.forEach(f => {
+    f.x += f.dir * 2.5;
+    if (ov(P.x,P.y,P.w,P.h, f.x,f.y,f.w,f.h)) { hurtPlayer(); }
+    // Nunca desaparece al tocarlo, solo si se va por los bordes
+    if (f.x > W + 120 || f.x < -120) f.dead = true;
+  });
+  foops = foops.filter(f => !f.dead);
+}
+
+// ── RENDER ──
+
+// ── RENDER ──
+function render() {
+  ctx.clearRect(0, 0, W, H);
+
+  let sx = 0, sy = 0;
+  if (shkMs > 0) { sx = (Math.random()-0.5)*shkMag*2; sy = (Math.random()-0.5)*shkMag*2; }
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  // Fondo
+  ctx.fillStyle = '#040407';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid sutil
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Advertencia de pisotón
+  if (stompPhase === 'warning') {
+    const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 75);
+    ctx.save();
+    ctx.shadowColor = '#ff2222'; ctx.shadowBlur = 50;
+    ctx.fillStyle = `rgba(255,20,20,${0.22 + pulse*0.38})`;
+    ctx.fillRect(0, FLOOR_Y-10, W, 10);
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = `rgba(255,80,80,${0.6 + pulse*0.4})`;
+    ctx.font = "bold 22px 'Fredoka', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.fillText('⚠️  ¡PISOTÓN!  ⚠️', W/2, FLOOR_Y-20);
+    ctx.restore();
+  }
+
+  // Piso
+  ctx.fillStyle = '#080808';
+  ctx.fillRect(0, FLOOR_Y, W, H-FLOOR_Y);
+  ctx.save();
+  ctx.shadowColor = 'rgba(255,255,255,0.9)'; ctx.shadowBlur = 16;
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,FLOOR_Y); ctx.lineTo(W,FLOOR_Y); ctx.stroke();
+  ctx.restore();
+
+  // Borde arena
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 2;
+  ctx.shadowColor = 'rgba(255,255,255,0.35)'; ctx.shadowBlur = 10;
+  ctx.strokeRect(1,1,W-2,H-2);
+  ctx.restore();
+
+  // Jefe (sin mini corazones encima)
+  if (B.lives > 0 || gState === 'explode') {
+    if (B.lives > 0) {
+      const bsx = B.shkMs > 0 ? (Math.random()-0.5)*14 : 0;
+      ctx.drawImage(SPR.boss, B.x+bsx, B.y, B.w, B.h);
+    }
+  }
+
+  // Martillos
+  hammers.forEach(h => ctx.drawImage(SPR.hammer, h.x, h.y, h.w, h.h));
+
+  // Fantasma
+  if (ghost) ctx.drawImage(SPR.ghost, ghost.x, ghost.y, ghost.w, ghost.h);
+
+  // Secuaz (espejado según dirección)
+  if (secuaz) {
+    ctx.save();
+    if (secuaz.dir < 0) {
+      ctx.translate(secuaz.x + secuaz.w, secuaz.y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(SPR.secuaz, 0, 0, secuaz.w, secuaz.h);
+    } else {
+      ctx.drawImage(SPR.secuaz, secuaz.x, secuaz.y, secuaz.w, secuaz.h);
+    }
+    ctx.restore();
+  }
+
+  // Misiles (siempre van hacia la derecha)
+  missiles.forEach(m => ctx.drawImage(SPR.misil, m.x, m.y, m.w, m.h));
+
+  // Foops (espejado según dirección, igual que Secuaz)
+  foops.forEach(f => {
+    ctx.save();
+    if (f.dir < 0) {
+      ctx.translate(f.x + f.w, f.y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(SPR.foop, 0, 0, f.w, f.h);
+    } else {
+      ctx.drawImage(SPR.foop, f.x, f.y, f.w, f.h);
+    }
+    ctx.restore();
+  });
+
+  // Jugador
+  {
+    const flash = P.invMs > 0 && Math.floor(P.invMs/110) % 2 === 1;
+    if (!flash) {
+      ctx.save();
+      if (P.superJump) { ctx.shadowColor = '#ffff44'; ctx.shadowBlur = 28; }
+      if (!P.facingRight) {
+        ctx.translate(P.x+P.w, P.y); ctx.scale(-1,1);
+        ctx.drawImage(SPR.player, 0, 0, P.w, P.h);
+      } else {
+        ctx.drawImage(SPR.player, P.x, P.y, P.w, P.h);
+      }
+      ctx.restore();
+    }
+  }
+
+  // Partículas
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.a);
+    ctx.fillStyle = p.c; ctx.shadowColor = p.c; ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+
+  ctx.restore(); // fin shake
+
+  // HUD
+  if (gState === 'play' || gState === 'explode') {
+    // Vidas jugador (izquierda)
+    let heartsP = '';
+    for (let i = 0; i < 3; i++) heartsP += i < P.lives ? '❤️ ' : '🖤 ';
+    ctx.font = "28px sans-serif"; ctx.textAlign = 'left';
+    ctx.fillText(heartsP.trim(), 16, 34);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = "15px 'Fredoka', sans-serif";
+    ctx.fillText('TÚ', 16, 54);
+
+    // Vidas jefe (esquina inferior derecha) con 💜
+    let heartsB = '';
+    for (let i = 0; i < 3; i++) heartsB += i < B.lives ? '💜 ' : '🖤 ';
+    ctx.font = "28px sans-serif"; ctx.textAlign = 'right';
+    ctx.fillText(heartsB.trim(), W-16, H-30);
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.font = "15px 'Fredoka', sans-serif";
+    ctx.fillText('ARAÑA JEFE', W-16, H-12);
+
+    if (ghost) {
+      ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,150,0.7)';
+      ctx.font = "18px 'Fredoka', sans-serif";
+      ctx.fillText('¡Salta encima del fantasma para alcanzar al jefe!', W/2, H-60);
+    }
+  }
+
+  // Fade
+  if (gState === 'fade' || gState === 'end') {
+    ctx.fillStyle = `rgba(0,0,0,${fadeAlpha})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Texto final
+  if (gState === 'end' && gStateMs > 700) {
+    const ta = Math.min(1, (gStateMs-700)/800);
+    ctx.save();
+    ctx.globalAlpha = ta;
+    ctx.fillStyle   = '#ffffff';
+    ctx.textAlign   = 'center';
+    ctx.font        = "bold 30px 'Fredoka', sans-serif";
+    wrapText(ctx,
+      'Y gracias a tu ayuda, las Cabezas de Ignacio pudieron escapar y ser libres de Juguetón.',
+      W/2, H/2, W-260, 50);
+    ctx.restore();
+  }
+}
+
+
+function wrapText(ctx, text, x, y, maxW, lh) {
+  const words = text.split(' ');
+  let line = '', lines = [];
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w+' '; }
+    else line = test;
+  });
+  lines.push(line.trim());
+  const startY = y - ((lines.length-1)*lh)/2;
+  lines.forEach((l,i) => ctx.fillText(l, x, startY+i*lh));
+}
+
+// ── GAME LOOP ──
+function loop(ts) {
+  const dt = Math.min(ts - lastT, 50);
+  lastT = ts;
+
+  if (loaded >= 7) {
+    update(dt);
+    render();
+    // Botón de pausa solo visible mientras se juega
+    if (gState === 'play' && !paused) pauseBtn.classList.add('visible');
+    else pauseBtn.classList.remove('visible');
+  } else {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.font = "32px 'Fredoka', sans-serif";
+    ctx.fillText('Cargando...', W/2, H/2);
+  }
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(t => { lastT = t; requestAnimationFrame(loop); });
+
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+
+// ── TOUCH CONTROLS (◀ ▶) ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var tc = document.getElementById('touchControls');
+    tc.style.display = 'flex';
+    function bind(id, code){
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart',  function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keydown',{code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchend',    function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchcancel', function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+    }
+    bind('btnTouchLeft',  'ArrowLeft');
+    bind('btnTouchRight', 'ArrowRight');
+})();
+
+
+// ── TOUCH → SPACE ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var wrapper = document.getElementById('wrapper');
+    var tc      = document.getElementById('touchControls'); // puede ser null
+    wrapper.addEventListener('touchstart', function(e){
+        if (tc && tc.contains(e.target)) return; // ignora botones direccionales
+        document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));
+    }, {passive:true});
+    wrapper.addEventListener('touchend', function(e){
+        if (tc && tc.contains(e.target)) return;
+        document.dispatchEvent(new KeyboardEvent('keyup',{code:'Space',bubbles:true}));
+    }, {passive:true});
+})();
+
+</script>
+</body>
+</html>

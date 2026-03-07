@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adivinanzas con Listo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* ── WRAPPER ── */
+        #wrapper {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+            overflow: hidden;
+        }
+
+        /* ── GAME AREA ── */
+        #gameArea {
+            width: 100%;
+            height: 100%;
+            background: url('Escuela.png') center/cover no-repeat;
+            position: relative;
+            display: flex;
+            align-items: center;
+            image-rendering: pixelated;
+        }
+
+        /* ── HUD ── */
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 52px;
+            background: rgba(0,0,0,0.55);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            z-index: 3;
+        }
+
+        #hudScore {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fbbf24;
+            letter-spacing: 0.5px;
+        }
+
+        #hudLives {
+            font-size: 22px;
+            letter-spacing: 4px;
+        }
+
+        /* ── TIMER BAR ── */
+        #timerBarWrap {
+            position: absolute;
+            top: 52px; left: 0; right: 0;
+            height: 8px;
+            background: rgba(0,0,0,0.12);
+            z-index: 3;
+        }
+
+        #timerBar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #22c55e, #fbbf24);
+            transition: width 1s linear, background 0.5s;
+            transform-origin: left;
+        }
+
+        #timerBar.warning { background: linear-gradient(90deg, #f97316, #ef4444); }
+
+        /* ── LISTO (personaje izquierdo) ── */
+        #listoWrap {
+            position: absolute;
+            left: 28px;
+            bottom: 40px;
+            width: 240px;
+            height: 320px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #listoImg {
+            width: 240px;
+            height: 320px;
+            image-rendering: pixelated;
+            object-fit: contain;
+        }
+
+        #listoName {
+            position: absolute;
+            bottom: -28px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e1b4b;
+            background: rgba(251,191,36,0.85);
+            border-radius: 20px;
+            padding: 2px 14px;
+            white-space: nowrap;
+        }
+
+        /* ── ÁREA DE PREGUNTA ── */
+        #questionArea {
+            position: absolute;
+            top: 70px;
+            left: 310px;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            z-index: 2;
+        }
+
+        #timerCountdown {
+            font-size: 16px;
+            font-weight: 600;
+            color: #64748b;
+            letter-spacing: 1px;
+        }
+
+        #timerCountdown span {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1e1b4b;
+        }
+
+        #questionBox {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            border: 4px solid #fbbf24;
+            border-radius: 24px;
+            padding: 28px 48px;
+            box-shadow: 0 8px 32px rgba(30,27,75,0.18), 0 0 0 1px rgba(251,191,36,0.15);
+            text-align: center;
+            min-width: 280px;
+        }
+
+        #questionText {
+            font-size: 65px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 24px rgba(251,191,36,0.5);
+            letter-spacing: 4px;
+            line-height: 1;
+        }
+
+        #questionLabel {
+            font-size: 15px;
+            color: #a5b4fc;
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        /* ── BOTONES DE RESPUESTA ── */
+        #answersGrid {
+            display: flex;
+            gap: 16px;
+        }
+
+        .ans-btn {
+            background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+            border: 3px solid #cbd5e1;
+            border-radius: 18px;
+            padding: 18px 28px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: #1e1b4b;
+            cursor: pointer;
+            min-width: 130px;
+            transition: all 0.15s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10), 0 2px 0 #b0bec5;
+            position: relative;
+            top: 0;
+        }
+
+        .ans-btn:hover:not(:disabled) {
+            background: linear-gradient(145deg, #fef3c7, #fde68a);
+            border-color: #fbbf24;
+            color: #92400e;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(251,191,36,0.3), 0 2px 0 #d97706;
+        }
+
+        .ans-btn:active:not(:disabled) {
+            transform: translateY(1px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.12), 0 1px 0 #b0bec5;
+        }
+
+        .ans-btn.correct {
+            background: linear-gradient(145deg, #d1fae5, #a7f3d0) !important;
+            border-color: #10b981 !important;
+            color: #065f46 !important;
+            box-shadow: 0 0 20px rgba(16,185,129,0.4) !important;
+        }
+
+        .ans-btn.wrong {
+            background: linear-gradient(145deg, #fee2e2, #fecaca) !important;
+            border-color: #ef4444 !important;
+            color: #991b1b !important;
+            box-shadow: 0 0 20px rgba(239,68,68,0.4) !important;
+        }
+
+        .ans-btn:disabled { cursor: not-allowed; }
+
+        /* ── ANIMACIONES ── */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 50%, 90% { transform: translateX(-8px) rotate(-1deg); }
+            30%, 70% { transform: translateX(8px) rotate(1deg); }
+        }
+
+        @keyframes shakeScreen {
+            0%, 100% { transform: translate(0,0); }
+            15% { transform: translate(-6px, 3px); }
+            30% { transform: translate(6px, -3px); }
+            45% { transform: translate(-4px, 4px); }
+            60% { transform: translate(4px, -4px); }
+            75% { transform: translate(-3px, 2px); }
+            90% { transform: translate(3px, -2px); }
+        }
+
+        @keyframes correctPop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+        }
+
+        #wrapper.screen-shake { animation: shakeScreen 0.5s ease; }
+        #listoWrap.listo-shake { animation: shake 0.55s ease; }
+        #questionBox.correct-pop { animation: correctPop 0.3s ease; }
+
+        /* ── FEEDBACK FLOTANTE ── */
+        #feedback {
+            position: absolute;
+            top: 158px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 38px;
+            font-weight: 700;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 9;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            white-space: nowrap;
+        }
+
+        #feedback.show { opacity: 1; }
+
+        /* ── BOTÓN PAUSA ── */
+        #pauseBtn {
+            position: absolute;
+            top: 54px;
+            right: 12px;
+            z-index: 5;
+            background: rgba(0,0,0,0.55);
+            border: 2px solid #fbbf24;
+            border-radius: 10px;
+            color: #fbbf24;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: none;
+        }
+        #pauseBtn:hover { background: rgba(251,191,36,0.2); transform: scale(1.08); }
+        #pauseBtn.visible { display: block; }
+
+        /* ── OVERLAYS COMPARTIDOS ── */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.78);
+            z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+
+        .panel {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
+            border: 4px solid #fbbf24;
+            border-radius: 20px;
+            padding: 36px 44px;
+            max-width: 540px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(251,191,36,0.3);
+            text-align: center;
+        }
+
+        .panel h1 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251,191,36,0.6);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .panel .subtitle {
+            color: #a5b4fc;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .tut-item {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e0e7ff;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .tut-item .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+        .btn-play {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 48px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 1px;
+        }
+        .btn-play:hover { transform: scale(1.06); box-shadow: 0 8px 28px rgba(251,191,36,0.6); }
+
+        #goScore { font-size: 26px; color: #a5b4fc; margin: 12px 0 24px; }
+        #goScore span { color: #fbbf24; font-weight: 700; font-size: 34px; }
+        #goCorrect { font-size: 18px; color: #86efac; margin-bottom: 24px; }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+            transition: transform 0.15s;
+            margin-right: 12px;
+        }
+        .btn-retry:hover { transform: scale(1.06); }
+
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .btn-back:hover { transform: scale(1.06); }
+
+        /* PAUSA */
+        .pause-panel h2 {
+            font-size: 34px;
+            color: #fbbf24;
+            margin-bottom: 28px;
+            text-shadow: 0 0 16px rgba(251,191,36,0.5);
+        }
+
+        .btn-resume {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 44px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .btn-resume:hover { transform: scale(1.05); }
+
+        .btn-quit {
+            background: rgba(255,255,255,0.1);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 10px 44px;
+            cursor: pointer;
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+        }
+        .btn-quit:hover { transform: scale(1.05); }
+
+        /* Decoración del panel de pausa: score actual */
+        #pauseScore {
+            font-size: 20px;
+            color: #a5b4fc;
+            margin-bottom: 28px;
+        }
+        #pauseScore span { color: #fbbf24; font-weight: 700; }
+
+        /* ── Victoria (Modo Historia) ── */
+        #victoryOverlay {
+            background: radial-gradient(ellipse at center, #1a1a4e 0%, #0a0a1e 100%);
+        }
+        #victoryOverlay .panel {
+            text-align: center;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        #victoryOverlay .panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .victory-title {
+            font-size: 64px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 40px rgba(251,191,36,0.8), 0 4px 16px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+            animation: victoryPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes victoryPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .victory-sub {
+            font-size: 22px;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 28px;
+        }
+        #victoryScore {
+            font-size: 28px;
+            color: white;
+            margin-bottom: 36px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 14px;
+            padding: 14px 28px;
+            display: inline-block;
+        }
+        #victoryScore span {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        .btn-victory {
+            background: linear-gradient(135deg, #7c3aed, #be185d);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 16px 40px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+        }
+        .btn-victory:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(124,58,237,0.6);
+        }
+        /* Confetti stars */
+        .confetti-star {
+            position: absolute;
+            font-size: 20px;
+            animation: floatStar 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes floatStar {
+            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <!-- ÁREA DE JUEGO -->
+    <div id="gameArea">
+
+        <!-- HUD -->
+        <div id="hud">
+            <div id="hudScore">⭐ 0</div>
+            <div id="hudLives">❤️ ❤️ ❤️</div>
+        </div>
+
+        <!-- BARRA TEMPORIZADOR -->
+        <div id="timerBarWrap">
+            <div id="timerBar"></div>
+        </div>
+
+        <!-- PERSONAJE LISTO -->
+        <div id="listoWrap">
+            <img id="listoImg" src="Listo.png" alt="Listo">
+            <span id="listoName">💡 Listo</span>
+        </div>
+
+        <!-- PREGUNTA -->
+        <div id="questionArea">
+            <div id="timerCountdown">Tiempo: <span id="timerNum">30</span>s</div>
+
+            <div id="questionBox">
+                <div id="questionText">?</div>
+                <div id="questionLabel">¿Cuál es el resultado?</div>
+            </div>
+
+            <div id="answersGrid">
+                <button class="ans-btn" id="btn0">—</button>
+                <button class="ans-btn" id="btn1">—</button>
+                <button class="ans-btn" id="btn2">—</button>
+            </div>
+        </div>
+
+        <!-- FEEDBACK FLOTANTE -->
+        <div id="feedback"></div>
+    </div>
+
+    <!-- BOTÓN PAUSA -->
+    <button id="pauseBtn">⏸ Pausa</button>
+
+    <!-- ── TUTORIAL ── -->
+    <div class="overlay" id="tutorialOverlay">
+        <div class="panel">
+            <h1>💡 Adivinanzas con Listo</h1>
+            <p class="subtitle">¡Resuelve las operaciones antes de que se acabe el tiempo!</p>
+
+            <div class="tutorial-grid">
+                <div class="tut-item">
+                    <span class="icon">🔢</span>
+                    Aparecerá una <strong>operación matemática</strong>: suma, resta, multiplicación o división.
+                </div>
+                <div class="tut-item">
+                    <span class="icon">👆</span>
+                    Elige la <strong>respuesta correcta</strong> entre las 3 opciones. ¡Solo una es verdadera!
+                </div>
+                <div class="tut-item">
+                    <span class="icon">⏱️</span>
+                    Tienes <strong>30 segundos</strong> por pregunta. ¡Si se acaba el tiempo, pierdes una vida!
+                </div>
+                <div class="tut-item">
+                    <span class="icon">❤️</span>
+                    Comienzas con <strong>3 vidas</strong>. Respuesta incorrecta o tiempo agotado = pierdes una vida.
+                </div>
+            </div>
+
+            <button class="btn-play" id="btnPlay">¡A jugar!</button>
+        </div>
+    </div>
+
+    <!-- ── PAUSA ── -->
+    <div class="overlay hidden" id="pauseOverlay">
+        <div class="panel pause-panel">
+            <h2>⏸ Pausa</h2>
+            <div id="pauseScore">Puntuación actual: <span id="pauseScoreNum">0</span></div>
+            <button class="btn-resume" id="btnResume">▶ Continuar</button>
+            <button class="btn-quit" id="btnQuitPause">🚪 Salir al menú</button>
+        </div>
+    </div>
+
+    <!-- ── GAME OVER ── -->
+    <div class="overlay hidden" id="gameOverOverlay">
+        <div class="panel">
+            <h1>💡 ¡Fin del juego!</h1>
+            <div id="goScore">Puntuación: <span id="finalScore">0</span></div>
+            <div id="goCorrect">✅ Respuestas correctas: <span id="finalCorrect">0</span></div>
+            <button class="btn-retry" id="btnRetry">🔄 Reintentar</button>
+            <button class="btn-back" id="btnBack">🏠 Menú</button>
+        </div>
+    </div>
+
+    <!-- VICTORIA (Modo Historia) -->
+    <div class="overlay hidden" id="victoryOverlay">
+        <div class="panel">
+            <span class="confetti-star" style="left:10%;bottom:5%;animation-delay:0.0s;animation-duration:2.5s">⭐</span><span class="confetti-star" style="left:25%;bottom:8%;animation-delay:0.4s;animation-duration:3.0s">✨</span><span class="confetti-star" style="left:40%;bottom:3%;animation-delay:0.8s;animation-duration:2.8s">🌟</span><span class="confetti-star" style="left:60%;bottom:6%;animation-delay:0.2s;animation-duration:3.2s">⭐</span><span class="confetti-star" style="left:75%;bottom:9%;animation-delay:0.6s;animation-duration:2.6s">✨</span><span class="confetti-star" style="left:88%;bottom:4%;animation-delay:1.0s;animation-duration:3.0s">🌟</span><span class="confetti-star" style="left:50%;bottom:12%;animation-delay:0.3s;animation-duration:2.9s">⭐</span><span class="confetti-star" style="left:18%;bottom:15%;animation-delay:0.7s;animation-duration:3.1s">✨</span><span class="confetti-star" style="left:82%;bottom:11%;animation-delay:0.1s;animation-duration:2.7s">🌟</span>
+            <div class="victory-title">🏆 ¡Victoria! 🏆</div>
+            <div class="victory-sub" id="victorySubtitle">¡Lo lograste!</div>
+            <div id="victoryScore">Puntaje obtenido: <span id="victoryScoredNum">0</span></div>
+            <button class="btn-victory" id="btnVictory">🎮 Volver al menú</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ═══════════════════════════════════════════
+       ESTADO DEL JUEGO
+    ═══════════════════════════════════════════ */
+
+// ═══════════════════════════════════════════════════
+//  MODO HISTORIA — Configuración
+// ═══════════════════════════════════════════════════
+const GAME_KEY   = 'adivinanzas';
+const GAME_NAME  = 'Adivinanzas con Listo';
+const WIN_SCORE  = 1000;
+const HISTORIA_COMPLETED_KEY = 'historia_completed';
+const SESSION_GAME_KEY = 'jugueton_came_from_minigame';
+
+function isHistoriaMode() {
+    return sessionStorage.getItem('jugueton_mode') === 'historia';
+}
+
+function checkWin() {
+    if (!isHistoriaMode()) return;
+    if (state.score >= WIN_SCORE) {
+        triggerVictory();
+    }
+}
+
+function triggerVictory() {
+    if (state._victoryTriggered) return;
+    state._victoryTriggered = true;
+    // stop the game timer
+    clearInterval(window._adivTimer);
+
+    let completed = JSON.parse(localStorage.getItem(HISTORIA_COMPLETED_KEY) || '[]');
+    if (!completed.includes(GAME_KEY)) {
+        completed.push(GAME_KEY);
+        localStorage.setItem(HISTORIA_COMPLETED_KEY, JSON.stringify(completed));
+    }
+    sessionStorage.setItem('jugueton_last_win', GAME_NAME);
+    sessionStorage.setItem(SESSION_GAME_KEY, '1');
+
+    document.getElementById('victoryScoredNum').textContent = state.score;
+    const totalGames = 6;
+    const remaining  = totalGames - completed.length;
+    document.getElementById('victorySubtitle').textContent =
+        remaining === 0
+        ? '¡Completaste todos los minijuegos! 🎉'
+        : `¡Te quedan ${remaining} minijuego${remaining === 1 ? '' : 's'} por completar!`;
+    document.getElementById('victoryOverlay').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnV = document.getElementById('btnVictory');
+    if (btnV) btnV.addEventListener('click', () => { window.location.href = 'index.html'; });
+});
+
+    const TOTAL_TIME = 30;
+
+    let state = {
+        lives: 3,
+        score: 0,
+        correct: 0,
+        running: false,
+        answering: false,   // true mientras se muestra el feedback
+        timeLeft: TOTAL_TIME,
+        correctAnswer: 0,
+        timerInterval: null,
+    };
+
+    /* ═══════════════════════════════════════════
+       REFERENCIAS DOM
+    ═══════════════════════════════════════════ */
+    const wrapper       = document.getElementById('wrapper');
+    const hudScore      = document.getElementById('hudScore');
+    const hudLives      = document.getElementById('hudLives');
+    const timerBar      = document.getElementById('timerBar');
+    const timerNum      = document.getElementById('timerNum');
+    const questionText  = document.getElementById('questionText');
+    const questionBox   = document.getElementById('questionBox');
+    const answersGrid   = document.getElementById('answersGrid');
+    const answerBtns    = [
+        document.getElementById('btn0'),
+        document.getElementById('btn1'),
+        document.getElementById('btn2'),
+    ];
+    const feedbackEl    = document.getElementById('feedback');
+    const pauseBtn      = document.getElementById('pauseBtn');
+    const listoWrap     = document.getElementById('listoWrap');
+    const pauseScoreNum = document.getElementById('pauseScoreNum');
+
+    /* ═══════════════════════════════════════════
+       GENERADOR DE PREGUNTAS
+    ═══════════════════════════════════════════ */
+    function randomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateQuestion() {
+        const ops = ['+', '-', '×', '÷'];
+        const op  = ops[Math.floor(Math.random() * ops.length)];
+        let a, b, answer;
+
+        switch (op) {
+            case '+':
+                a = randomInt(1, 50);
+                b = randomInt(1, 50);
+                answer = a + b;
+                break;
+            case '-':
+                a = randomInt(5, 60);
+                b = randomInt(1, a);
+                answer = a - b;
+                break;
+            case '×':
+                a = randomInt(2, 12);
+                b = randomInt(2, 12);
+                answer = a * b;
+                break;
+            case '÷':
+                // Garantizar división exacta
+                b = randomInt(2, 12);
+                answer = randomInt(1, 12);
+                a = b * answer;
+                break;
+        }
+
+        return { text: `${a} ${op} ${b}`, answer };
+    }
+
+    function generateWrongAnswer(correct, existingWrong) {
+        let wrong;
+        const existing = new Set([correct, ...existingWrong]);
+        let attempts = 0;
+        do {
+            const delta = randomInt(-20, 20);
+            wrong = correct + (delta === 0 ? 1 : delta);
+            attempts++;
+        } while (existing.has(wrong) && attempts < 50);
+        return wrong;
+    }
+
+    function shuffleArray(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    /* ═══════════════════════════════════════════
+       NUEVA PREGUNTA
+    ═══════════════════════════════════════════ */
+    function loadQuestion() {
+        const { text, answer } = generateQuestion();
+        state.correctAnswer = answer;
+        state.answering      = false;
+
+        questionText.textContent = text;
+
+        // Generar 2 incorrectas
+        const wrong1 = generateWrongAnswer(answer, []);
+        const wrong2 = generateWrongAnswer(answer, [wrong1]);
+
+        const options = shuffleArray([answer, wrong1, wrong2]);
+
+        answerBtns.forEach((btn, i) => {
+            btn.textContent = options[i];
+            btn.className   = 'ans-btn';
+            btn.disabled    = false;
+        });
+
+        // Reiniciar temporizador
+        startTimer();
+
+        // Actualizar HUD
+        updateHUD();
+    }
+
+    /* ═══════════════════════════════════════════
+       TEMPORIZADOR
+    ═══════════════════════════════════════════ */
+    function startTimer() {
+        clearInterval(state.timerInterval);
+        state.timeLeft = TOTAL_TIME;
+        updateTimerUI();
+
+        state.timerInterval = setInterval(() => {
+            if (!state.running || state.answering) return;
+            state.timeLeft--;
+            updateTimerUI();
+            if (state.timeLeft <= 0) {
+                clearInterval(state.timerInterval);
+                onTimeout();
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(state.timerInterval);
+    }
+
+    function updateTimerUI() {
+        const pct = (state.timeLeft / TOTAL_TIME) * 100;
+        timerBar.style.width = pct + '%';
+        timerNum.textContent = state.timeLeft;
+
+        if (state.timeLeft <= 10) {
+            timerBar.classList.add('warning');
+        } else {
+            timerBar.classList.remove('warning');
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       FEEDBACK
+    ═══════════════════════════════════════════ */
+    function showFeedback(text, color) {
+        feedbackEl.textContent = text;
+        feedbackEl.style.color = color;
+        feedbackEl.classList.add('show');
+        setTimeout(() => feedbackEl.classList.remove('show'), 900);
+    }
+
+    function triggerShake() {
+        wrapper.classList.add('screen-shake');
+        listoWrap.classList.add('listo-shake');
+        setTimeout(() => {
+            wrapper.classList.remove('screen-shake');
+            listoWrap.classList.remove('listo-shake');
+        }, 600);
+    }
+
+    /* ═══════════════════════════════════════════
+       LÓGICA DE RESPUESTA
+    ═══════════════════════════════════════════ */
+    function onAnswer(chosenBtn, chosenValue) {
+        if (state.answering || !state.running) return;
+        state.answering = true;
+        stopTimer();
+
+        // Deshabilitar todos los botones
+        answerBtns.forEach(b => b.disabled = true);
+
+        const correct = parseInt(chosenValue) === state.correctAnswer;
+
+        if (correct) {
+            chosenBtn.classList.add('correct');
+            questionBox.classList.add('correct-pop');
+            state.score   += 10 + state.timeLeft; // bonus por rapidez
+            checkWin();
+            state.correct += 1;
+            showFeedback('¡Correcto! ✅', '#10b981');
+            updateHUD();
+            setTimeout(() => {
+                questionBox.classList.remove('correct-pop');
+                if (state.running) loadQuestion();
+            }, 900);
+        } else {
+            // Marcar la incorrecta y mostrar la correcta
+            chosenBtn.classList.add('wrong');
+            answerBtns.forEach(b => {
+                if (parseInt(b.textContent) === state.correctAnswer) {
+                    b.classList.add('correct');
+                }
+            });
+            loseLife();
+        }
+    }
+
+    function onTimeout() {
+        if (state.answering || !state.running) return;
+        state.answering = true;
+        answerBtns.forEach(b => {
+            b.disabled = true;
+            if (parseInt(b.textContent) === state.correctAnswer) b.classList.add('correct');
+        });
+        showFeedback('⏱️ ¡Tiempo!', '#f97316');
+        loseLife();
+    }
+
+    function loseLife() {
+        state.lives--;
+        triggerShake();
+        updateHUD();
+
+        if (state.lives <= 0) {
+            setTimeout(endGame, 800);
+        } else {
+            showFeedback('💔 Perdiste una vida', '#ef4444');
+            setTimeout(() => {
+                if (state.running) loadQuestion();
+            }, 1100);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       HUD
+    ═══════════════════════════════════════════ */
+    function updateHUD() {
+        hudScore.textContent = `⭐ ${state.score}`;
+        let hearts = '';
+        for (let i = 0; i < 3; i++) hearts += i < state.lives ? '❤️ ' : '🖤 ';
+        hudLives.textContent = hearts.trim();
+        pauseScoreNum.textContent = state.score;
+    }
+
+    /* ═══════════════════════════════════════════
+       INICIO / FIN
+    ═══════════════════════════════════════════ */
+    function startGame() {
+        state = {
+            lives: 3,
+            score: 0,
+            correct: 0,
+            running: true,
+            answering: false,
+            timeLeft: TOTAL_TIME,
+            correctAnswer: 0,
+            timerInterval: null,
+        };
+
+        pauseBtn.classList.add('visible');
+        pauseBtn.textContent = '⏸ Pausa';
+        document.getElementById('pauseOverlay').classList.add('hidden');
+        document.getElementById('gameOverOverlay').classList.add('hidden');
+
+        updateHUD();
+        loadQuestion();
+    }
+
+    function endGame() {
+        state.running = false;
+        stopTimer();
+        pauseBtn.classList.remove('visible');
+
+        document.getElementById('finalScore').textContent   = state.score;
+        document.getElementById('finalCorrect').textContent = state.correct;
+        document.getElementById('gameOverOverlay').classList.remove('hidden');
+        // ── Guardar mejor puntaje ──
+        const _prevAd = parseInt(localStorage.getItem('score_adivinanzas') || '0');
+        if (state.score > _prevAd) localStorage.setItem('score_adivinanzas', state.score);
+    }
+
+    /* ═══════════════════════════════════════════
+       PAUSA
+    ═══════════════════════════════════════════ */
+    let paused = false;
+
+    function togglePause() {
+        paused = !paused;
+        const overlay = document.getElementById('pauseOverlay');
+        if (paused) {
+            stopTimer();
+            overlay.classList.remove('hidden');
+            pauseBtn.textContent = '▶ Reanudar';
+        } else {
+            overlay.classList.add('hidden');
+            pauseBtn.textContent = '⏸ Pausa';
+            // Reanudar el temporizador desde donde quedó
+            state.timerInterval = setInterval(() => {
+                if (!state.running || state.answering) return;
+                state.timeLeft--;
+                updateTimerUI();
+                if (state.timeLeft <= 0) {
+                    clearInterval(state.timerInterval);
+                    onTimeout();
+                }
+            }, 1000);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       EVENTOS
+    ═══════════════════════════════════════════ */
+    document.getElementById('btnPlay').addEventListener('click', () => {
+        document.getElementById('tutorialOverlay').classList.add('hidden');
+        startGame();
+    });
+
+    document.getElementById('btnRetry').addEventListener('click', () => {
+        startGame();
+    });
+
+    document.getElementById('btnBack').addEventListener('click', () => history.back());
+    document.getElementById('btnQuitPause').addEventListener('click', () => {
+        state.running = false;
+        paused = false;
+        history.back();
+    });
+
+    pauseBtn.addEventListener('click', togglePause);
+    document.getElementById('btnResume').addEventListener('click', togglePause);
+
+    document.addEventListener('keydown', e => {
+        if (!state.running) return;
+        if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+    });
+
+    answerBtns.forEach(btn => {
+        btn.addEventListener('click', () => onAnswer(btn, btn.textContent));
+    });
+
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+</script>
+</body>
+</html>

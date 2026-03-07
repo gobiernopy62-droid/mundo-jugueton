@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atrapa a Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        #wrapper {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* ── OVERLAY COMPARTIDO ── */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.78);
+            z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+
+        .panel {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
+            border: 4px solid #fbbf24;
+            border-radius: 20px;
+            padding: 36px 44px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(251,191,36,0.3);
+            text-align: center;
+        }
+
+        .panel h1 {
+            font-size: 38px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251,191,36,0.6);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .panel .subtitle {
+            color: #a5b4fc;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .tut-item {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e0e7ff;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .tut-item span.key {
+            display: inline-block;
+            background: #fbbf24;
+            color: #1e1b4b;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 1px 8px;
+            font-size: 14px;
+            margin-right: 4px;
+        }
+
+        .tut-item .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+        .btn-play {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 48px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 1px;
+        }
+        .btn-play:hover {
+            transform: scale(1.06);
+            box-shadow: 0 8px 28px rgba(251,191,36,0.6);
+        }
+
+        /* ── GAME OVER ── */
+        #goScore { font-size: 28px; color: #a5b4fc; margin: 12px 0 24px; }
+        #goScore span { color: #fbbf24; font-weight: 700; font-size: 36px; }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+            transition: transform 0.15s;
+            margin-right: 12px;
+        }
+        .btn-retry:hover { transform: scale(1.06); }
+
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .btn-back:hover { transform: scale(1.06); }
+
+        /* ── PAUSA ── */
+        #pauseBtn {
+            position: absolute;
+            top: 52px;
+            right: 12px;
+            z-index: 5;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #fbbf24;
+            border-radius: 10px;
+            color: #fbbf24;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: none;
+        }
+        #pauseBtn:hover { background: rgba(251,191,36,0.2); transform: scale(1.08); }
+        #pauseBtn.visible { display: block; }
+
+        .pause-panel h2 {
+            font-size: 34px;
+            color: #fbbf24;
+            margin-bottom: 28px;
+            text-shadow: 0 0 16px rgba(251,191,36,0.5);
+        }
+        .pause-panel .btn-resume {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 44px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .pause-panel .btn-resume:hover { transform: scale(1.05); }
+        .pause-panel .btn-quit {
+            background: rgba(255,255,255,0.1);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 10px 44px;
+            cursor: pointer;
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+        }
+        .pause-panel .btn-quit:hover { transform: scale(1.05); }
+
+        /* ── Victoria (Modo Historia) ── */
+        #victoryOverlay {
+            background: radial-gradient(ellipse at center, #1a1a4e 0%, #0a0a1e 100%);
+        }
+        #victoryOverlay .panel {
+            text-align: center;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        #victoryOverlay .panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .victory-title {
+            font-size: 64px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 40px rgba(251,191,36,0.8), 0 4px 16px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+            animation: victoryPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes victoryPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .victory-sub {
+            font-size: 22px;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 28px;
+        }
+        #victoryScore {
+            font-size: 28px;
+            color: white;
+            margin-bottom: 36px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 14px;
+            padding: 14px 28px;
+            display: inline-block;
+        }
+        #victoryScore span {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        .btn-victory {
+            background: linear-gradient(135deg, #7c3aed, #be185d);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 16px 40px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+        }
+        .btn-victory:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(124,58,237,0.6);
+        }
+        /* Confetti stars */
+        .confetti-star {
+            position: absolute;
+            font-size: 20px;
+            animation: floatStar 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes floatStar {
+            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- TUTORIAL -->
+    <div class="overlay" id="tutorialOverlay">
+        <div class="panel">
+            <h1>🔫 Atrapa a Portal</h1>
+            <p class="subtitle">¡Dispárale a Portal Hombre antes de que escape!</p>
+
+            <div class="tutorial-grid">
+                <div class="tut-item">
+                    <span class="icon">🎯</span>
+                    <span class="key">W</span> / <span class="key">▲</span> Mover arriba<br>
+                    <span class="key">S</span> / <span class="key">▼</span> Mover abajo
+                </div>
+                <div class="tut-item">
+                    <span class="icon">💥</span>
+                    <span class="key">Espacio</span><br>
+                    Disparar una bala
+                </div>
+                <div class="tut-item">
+                    <span class="icon">🔄</span>
+                    Si atinas, <strong>recuperas la bala</strong> y Portal se teletransporta.
+                </div>
+                <div class="tut-item">
+                    <span class="icon">💔</span>
+                    Si gastas las <strong>6 balas</strong> sin atinar, <strong>pierdes una vida</strong>.
+                </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:12px 14px;color:#e0e7ff;font-size:15px;margin-bottom:20px;line-height:1.7;text-align:left;">
+                🔫 Tienes <strong>6 balas</strong> y <strong>3 vidas</strong>.<br>
+                ⚡ Portal Hombre se teletransporta solo cada cierto tiempo, ¡así que apunta rápido!
+            </div>
+
+            <button class="btn-play" id="btnPlay">¡Jugar!</button>
+        </div>
+    </div>
+
+    <!-- BOTÓN PAUSA -->
+    <button id="pauseBtn">⏸ Pausa</button>
+
+    <!-- PAUSA OVERLAY -->
+    <div class="overlay hidden" id="pauseOverlay">
+        <div class="panel pause-panel">
+            <h2>⏸ Juego en Pausa</h2>
+            <button class="btn-resume" id="btnResume">▶ Continuar</button>
+            <button class="btn-quit" id="btnQuitPause">← Volver al menú</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay hidden" id="gameOverOverlay">
+        <div class="panel">
+            <h1>💀 ¡Game Over!</h1>
+            <div id="goScore">Impactos: <span id="finalScore">0</span></div>
+            <button class="btn-retry" id="btnRetry">🔄 Reintentar</button>
+            <button class="btn-back" id="btnBack">← Volver</button>
+        </div>
+    </div>
+
+    <!-- VICTORIA (Modo Historia) -->
+    <div class="overlay hidden" id="victoryOverlay">
+        <div class="panel">
+            <span class="confetti-star" style="left:10%;bottom:5%;animation-delay:0.0s;animation-duration:2.5s">⭐</span><span class="confetti-star" style="left:25%;bottom:8%;animation-delay:0.4s;animation-duration:3.0s">✨</span><span class="confetti-star" style="left:40%;bottom:3%;animation-delay:0.8s;animation-duration:2.8s">🌟</span><span class="confetti-star" style="left:60%;bottom:6%;animation-delay:0.2s;animation-duration:3.2s">⭐</span><span class="confetti-star" style="left:75%;bottom:9%;animation-delay:0.6s;animation-duration:2.6s">✨</span><span class="confetti-star" style="left:88%;bottom:4%;animation-delay:1.0s;animation-duration:3.0s">🌟</span><span class="confetti-star" style="left:50%;bottom:12%;animation-delay:0.3s;animation-duration:2.9s">⭐</span><span class="confetti-star" style="left:18%;bottom:15%;animation-delay:0.7s;animation-duration:3.1s">✨</span><span class="confetti-star" style="left:82%;bottom:11%;animation-delay:0.1s;animation-duration:2.7s">🌟</span>
+            <div class="victory-title">🏆 ¡Victoria! 🏆</div>
+            <div class="victory-sub" id="victorySubtitle">¡Lo lograste!</div>
+            <div id="victoryScore">Puntaje obtenido: <span id="victoryScoredNum">0</span></div>
+            <button class="btn-victory" id="btnVictory">🎮 Volver al menú</button>
+        </div>
+    </div>
+    <!-- CONTROLES TÁCTILES -->
+    <div id="touchControls" style="display:none;position:absolute;right:28px;top:50%;transform:translateY(-50%);z-index:30;pointer-events:none;flex-direction:column;gap:20px;align-items:center;">
+        <button id="btnTouchUp"   style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">▲</button>
+        <button id="btnTouchDown" style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">▼</button>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  ATRAPA A PORTAL — Motor de juego
+// ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  MODO HISTORIA — Configuración
+// ═══════════════════════════════════════════════════
+const GAME_KEY   = 'atrapaPortal';
+const GAME_NAME  = 'Atrapa a Portal';
+const WIN_SCORE  = 20;
+const HISTORIA_COMPLETED_KEY = 'historia_completed';
+const SESSION_GAME_KEY = 'jugueton_came_from_minigame';
+
+function isHistoriaMode() {
+    return sessionStorage.getItem('jugueton_mode') === 'historia';
+}
+
+function checkWin() {
+    if (!isHistoriaMode()) return;
+    if (state.score >= WIN_SCORE) {
+        triggerVictory();
+    }
+}
+
+function triggerVictory() {
+    if (state._victoryTriggered) return;
+    state._victoryTriggered = true;
+    state.running = false;
+
+    let completed = JSON.parse(localStorage.getItem(HISTORIA_COMPLETED_KEY) || '[]');
+    if (!completed.includes(GAME_KEY)) {
+        completed.push(GAME_KEY);
+        localStorage.setItem(HISTORIA_COMPLETED_KEY, JSON.stringify(completed));
+    }
+    sessionStorage.setItem('jugueton_last_win', GAME_NAME);
+    sessionStorage.setItem(SESSION_GAME_KEY, '1');
+
+    document.getElementById('victoryScoredNum').textContent = state.score;
+    const totalGames = 6;
+    const remaining  = totalGames - completed.length;
+    document.getElementById('victorySubtitle').textContent =
+        remaining === 0
+        ? '¡Completaste todos los minijuegos! 🎉'
+        : `¡Te quedan ${remaining} minijuego${remaining === 1 ? '' : 's'} por completar!`;
+    document.getElementById('victoryOverlay').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnV = document.getElementById('btnVictory');
+    if (btnV) btnV.addEventListener('click', () => { window.location.href = 'index.html'; });
+});
+
+const canvas = document.getElementById('gameCanvas');
+const ctx    = canvas.getContext('2d');
+const W = 1280, H = 720;
+const SCALE = 6;
+
+// ── Medidas escaladas ──
+const GUN_W  = 23 * SCALE;   // 138
+const GUN_H  = 10 * SCALE;   //  60
+const ENE_W  =  9 * SCALE;   //  54
+const ENE_H  = 12 * SCALE;   //  72
+
+// ── Constantes de juego ──
+const GUN_X       = 37;           // posición X fija de la pistola
+const GUN_SPD     = 7;            // velocidad movimiento pistola
+const BULLET_SPD  = 20;           // velocidad bala
+const BULLET_W    = 14;           // ancho bala visual
+const BULLET_H    = 5;            // alto bala visual
+const MAX_BULLETS = 6;
+const MAX_LIVES   = 3;
+const TELEPORT_INTERVAL_MAX = 180; // frames entre teletransportes al inicio (~3 seg)
+const TELEPORT_INTERVAL_MIN = 40;  // frames entre teletransportes en el límite (~0.7 seg)
+const SPEED_SCALE_DURATION = 3600; // frames hasta velocidad máxima (~60 seg)
+const FLASH_FRAMES = 20;          // frames de flash al teletransportar
+
+// ── Zona de aparición de Portal Hombre ──
+const ENE_XMIN = GUN_X + GUN_W + 60;
+const ENE_XMAX = W - ENE_W - 20;
+const ENE_YMIN = 50;
+const ENE_YMAX = H - ENE_H - 20;
+
+// ── Imágenes ──
+function img(src) {
+    const i = new Image();
+    i.src = src;
+    return i;
+}
+const imgs = {
+    bg:     img('Oeste.png'),
+    gun:    img('Pistola.png'),
+    enemy:  img('PortalHombre.png'),
+};
+
+// ── Estado ──
+let state = {};
+let paused = false;
+let lastTime = 0;
+
+function randomEnemyPos() {
+    return {
+        x: ENE_XMIN + Math.random() * (ENE_XMAX - ENE_XMIN),
+        y: ENE_YMIN + Math.random() * (ENE_YMAX - ENE_YMIN),
+    };
+}
+
+function resetState() {
+    const pos = randomEnemyPos();
+    state = {
+        running:    false,
+        score:      0,
+        lives:      MAX_LIVES,
+        bullets:    MAX_BULLETS,
+        // Pistola
+        gunY:       H / 2 - GUN_H / 2,
+        // Balas activas en vuelo
+        activeBullets: [],
+        // Portal Hombre
+        enemyX:     pos.x,
+        enemyY:     pos.y,
+        teleportTimer:  0,
+        flashTimer:     0,
+        flashVisible:   true,
+        // Cooldown de disparo (para no disparar al tener espacio pulsado)
+        shootCooldown:  0,
+        // Agitaciones
+        enemyShakeTimer: 0,   // agita a Portal Hombre al recibir un disparo
+        screenShakeTimer: 0,  // agita la pantalla al fallar una bala
+        // Controls
+        keys: {},
+        // Tiempo transcurrido (para escalar velocidad)
+        elapsed: 0,
+    };
+}
+
+// ═══════════════════════════════════════════════════
+//  PAUSA
+// ═══════════════════════════════════════════════════
+function togglePause() {
+    paused = !paused;
+    const overlay = document.getElementById('pauseOverlay');
+    const btn     = document.getElementById('pauseBtn');
+    if (paused) {
+        overlay.classList.remove('hidden');
+        btn.textContent = '▶ Reanudar';
+    } else {
+        overlay.classList.add('hidden');
+        btn.textContent = '⏸ Pausa';
+        lastTime = performance.now();
+        requestAnimationFrame(loop);
+    }
+}
+
+// ═══════════════════════════════════════════════════
+//  LOOP PRINCIPAL
+// ═══════════════════════════════════════════════════
+function loop(ts) {
+    if (!state.running || paused) return;
+    requestAnimationFrame(loop);
+    lastTime = ts;
+    update();
+    draw();
+}
+
+// ═══════════════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════════════
+function update() {
+    if (!state.running) return;
+
+    // ── Mover pistola ──
+    const up   = state.keys['KeyW']   || state.keys['ArrowUp'];
+    const down = state.keys['KeyS']   || state.keys['ArrowDown'];
+    if (up)   state.gunY = Math.max(0, state.gunY - GUN_SPD);
+    if (down) state.gunY = Math.min(H - GUN_H, state.gunY + GUN_SPD);
+
+    // ── Disparar ──
+    if (state.shootCooldown > 0) state.shootCooldown--;
+    if (state.keys['Space'] && state.shootCooldown === 0 && state.bullets > 0) {
+        state.bullets--;
+        state.shootCooldown = 14; // evita ráfaga involuntaria
+        state.activeBullets.push({
+            x: GUN_X + GUN_W,
+            y: state.gunY + GUN_H / 2 - BULLET_H / 2,
+        });
+    }
+
+    // ── Mover balas ──
+    const toRemove = [];
+    for (let i = 0; i < state.activeBullets.length; i++) {
+        const b = state.activeBullets[i];
+        b.x += BULLET_SPD;
+
+        // Colisión con Portal Hombre (solo si es visible)
+        if (state.flashVisible &&
+            b.x + BULLET_W > state.enemyX &&
+            b.x < state.enemyX + ENE_W &&
+            b.y + BULLET_H > state.enemyY &&
+            b.y < state.enemyY + ENE_H)
+        {
+            toRemove.push(i);
+            state.score++;
+            checkWin();
+            state.bullets = Math.min(state.bullets + 1, MAX_BULLETS); // recupera bala
+            state.enemyShakeTimer = 40; // agitar Portal Hombre ~0.7 seg
+            teleportEnemy();
+            continue;
+        }
+
+        // Sale de pantalla → se pierde la bala (ya se descontó al disparar)
+        if (b.x > W) {
+            toRemove.push(i);
+            state.screenShakeTimer = 35; // agitar pantalla ~0.6 seg
+        }
+    }
+    // Eliminar balas en orden inverso
+    for (let i = toRemove.length - 1; i >= 0; i--) {
+        state.activeBullets.splice(toRemove[i], 1);
+    }
+
+    // ── Sin balas disponibles y sin balas en vuelo → perder vida ──
+    if (state.bullets === 0 && state.activeBullets.length === 0) {
+        state.lives--;
+        if (state.lives <= 0) {
+            endGame();
+            return;
+        }
+        state.bullets = MAX_BULLETS;
+    }
+
+    // ── Teletransporte automático ──
+    state.elapsed++;
+    const t = Math.min(state.elapsed / SPEED_SCALE_DURATION, 1);
+    const currentInterval = Math.round(TELEPORT_INTERVAL_MAX - t * (TELEPORT_INTERVAL_MAX - TELEPORT_INTERVAL_MIN));
+    state.teleportTimer++;
+    if (state.teleportTimer >= currentInterval) {
+        teleportEnemy();
+    }
+
+    // ── Flash de teletransportación ──
+    if (state.flashTimer > 0) {
+        state.flashTimer--;
+        // Parpadeo: visible en frames pares, oculto en impares
+        state.flashVisible = (state.flashTimer % 4 < 2);
+        if (state.flashTimer === 0) state.flashVisible = true;
+    }
+}
+
+function teleportEnemy() {
+    const pos = randomEnemyPos();
+    state.enemyX = pos.x;
+    state.enemyY = pos.y;
+    state.teleportTimer = 0;
+    state.flashTimer    = FLASH_FRAMES;
+    state.flashVisible  = false;
+}
+
+// ═══════════════════════════════════════════════════
+//  DRAW
+// ═══════════════════════════════════════════════════
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // ── Screen shake ──
+    let sx = 0, sy = 0;
+    if (state.screenShakeTimer > 0) {
+        state.screenShakeTimer--;
+        const amp = 7 * (state.screenShakeTimer / 35);
+        sx = (Math.random() - 0.5) * amp * 2;
+        sy = (Math.random() - 0.5) * amp;
+    }
+    ctx.save();
+    ctx.translate(sx, sy);
+
+    // Fondo
+    if (imgs.bg.complete && imgs.bg.naturalWidth > 0) {
+        ctx.drawImage(imgs.bg, 0, 0, W, H);
+    } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#87ceeb');
+        grad.addColorStop(0.6, '#d2a679');
+        grad.addColorStop(1, '#8b6340');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    // Portal Hombre
+    if (state.flashVisible) {
+        // ── Enemy shake ──
+        let ex = state.enemyX, ey = state.enemyY;
+        if (state.enemyShakeTimer > 0) {
+            state.enemyShakeTimer--;
+            const amp = 5 * (state.enemyShakeTimer / 40);
+            ex += (Math.random() - 0.5) * amp * 2;
+            ey += (Math.random() - 0.5) * amp;
+        }
+        if (imgs.enemy.complete && imgs.enemy.naturalWidth > 0) {
+            ctx.drawImage(imgs.enemy, ex, ey, ENE_W, ENE_H);
+        } else {
+            ctx.fillStyle = '#7c3aed';
+            ctx.fillRect(ex, ey, ENE_W, ENE_H);
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 14px Fredoka';
+            ctx.textAlign = 'center';
+            ctx.fillText('👤', ex + ENE_W / 2, ey + ENE_H / 2 + 5);
+        }
+    }
+    // (cuando flashVisible=false simplemente no se dibuja nada: es el parpadeo de teletransporte)
+
+    // Pistola
+    if (imgs.gun.complete && imgs.gun.naturalWidth > 0) {
+        ctx.drawImage(imgs.gun, GUN_X, state.gunY, GUN_W, GUN_H);
+    } else {
+        // Placeholder
+        ctx.fillStyle = '#374151';
+        ctx.fillRect(GUN_X, state.gunY, GUN_W, GUN_H);
+        ctx.fillStyle = '#9ca3af';
+        ctx.fillRect(GUN_X + GUN_W * 0.7, state.gunY + GUN_H * 0.3, GUN_W * 0.35, GUN_H * 0.3);
+    }
+
+    // Balas en vuelo
+    ctx.fillStyle = '#fbbf24';
+    for (const b of state.activeBullets) {
+        ctx.beginPath();
+        ctx.ellipse(b.x + BULLET_W / 2, b.y + BULLET_H / 2, BULLET_W / 2, BULLET_H / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore(); // fin del screen shake
+
+    // HUD (fuera del shake para que siempre se lea bien)
+    drawHUD();
+}
+
+function drawHUD() {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, 44);
+
+    // Impactos
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px Fredoka';
+    ctx.textAlign = 'left';
+    ctx.fillText(`🎯 ${state.score}`, 16, 30);
+
+    // Balas
+    ctx.textAlign = 'center';
+    ctx.font = '20px Fredoka';
+    let bullets = '';
+    for (let i = 0; i < MAX_BULLETS; i++) bullets += i < state.bullets ? '🔴 ' : '⚫ ';
+    ctx.fillStyle = 'white';
+    ctx.fillText(bullets.trim(), W / 2, 30);
+
+    // Vidas
+    ctx.textAlign = 'right';
+    ctx.font = '22px Fredoka';
+    let hearts = '';
+    for (let i = 0; i < MAX_LIVES; i++) hearts += i < state.lives ? '❤️ ' : '🖤 ';
+    ctx.fillStyle = 'white';
+    ctx.fillText(hearts.trim(), W - 16, 30);
+
+    // Velocidad (nivel de dificultad)
+    ctx.textAlign = 'left';
+    ctx.font = '16px Fredoka';
+    const t = Math.min(state.elapsed / SPEED_SCALE_DURATION, 1);
+    const speedPct = Math.round(t * 100);
+    ctx.fillStyle = t < 0.5 ? '#4ade80' : t < 0.8 ? '#fbbf24' : '#f87171';
+    ctx.fillText(`⚡ Vel. ${speedPct}%`, 16, H - 10);
+}
+
+// ═══════════════════════════════════════════════════
+//  INICIO / FIN
+// ═══════════════════════════════════════════════════
+function startGame() {
+    resetState();
+    paused = false;
+    state.running = true;
+    document.getElementById('pauseBtn').classList.add('visible');
+    document.getElementById('pauseBtn').textContent = '⏸ Pausa';
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function endGame() {
+    state.running = false;
+    paused = false;
+    document.getElementById('pauseBtn').classList.remove('visible');
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('finalScore').textContent = state.score;
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+    // ── Guardar mejor puntaje ──
+    const _prevAP = parseInt(localStorage.getItem('score_atrapaPortal') || '0');
+    if (state.score > _prevAP) localStorage.setItem('score_atrapaPortal', state.score);
+    // Dibujar un último frame para que no quede en negro
+    draw();
+}
+
+// ═══════════════════════════════════════════════════
+//  CONTROLES
+// ═══════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+    state.keys[e.code] = true;
+    // Pausa con Escape o P
+    if ((e.code === 'Escape' || e.code === 'KeyP') && state.running) {
+        e.preventDefault();
+        togglePause();
+    }
+    // Evitar scroll con flechas y espacio
+    if (['ArrowUp','ArrowDown','Space'].includes(e.code)) e.preventDefault();
+});
+document.addEventListener('keyup', e => {
+    state.keys[e.code] = false;
+});
+
+// ═══════════════════════════════════════════════════
+//  BOTONES UI
+// ═══════════════════════════════════════════════════
+document.getElementById('btnPlay').addEventListener('click', () => {
+    document.getElementById('tutorialOverlay').classList.add('hidden');
+    startGame();
+});
+
+document.getElementById('btnRetry').addEventListener('click', () => {
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    startGame();
+});
+
+document.getElementById('btnBack').addEventListener('click', () => {
+    history.back();
+});
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+document.getElementById('btnResume').addEventListener('click', togglePause);
+
+document.getElementById('btnQuitPause').addEventListener('click', () => {
+    state.running = false;
+    paused = false;
+    history.back();
+});
+
+// Dibuja fondo mientras espera en el tutorial
+imgs.bg.onload = () => {
+    ctx.drawImage(imgs.bg, 0, 0, W, H);
+};
+
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+
+// ── TOUCH CONTROLS (▲ ▼) ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var tc = document.getElementById('touchControls');
+    tc.style.display = 'flex';
+    function bind(id, code){
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart',  function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keydown',{code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchend',    function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchcancel', function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+    }
+    bind('btnTouchUp',   'ArrowUp');
+    bind('btnTouchDown', 'ArrowDown');
+})();
+
+
+// ── TOUCH → SPACE ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var wrapper = document.getElementById('wrapper');
+    var tc      = document.getElementById('touchControls'); // puede ser null
+    wrapper.addEventListener('touchstart', function(e){
+        if (tc && tc.contains(e.target)) return; // ignora botones direccionales
+        document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));
+    }, {passive:true});
+    wrapper.addEventListener('touchend', function(e){
+        if (tc && tc.contains(e.target)) return;
+        document.dispatchEvent(new KeyboardEvent('keyup',{code:'Space',bubbles:true}));
+    }, {passive:true});
+})();
+
+</script>
+</body>
+</html>

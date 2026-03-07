@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Galleta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #0a0a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        #wrapper {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        /* ── OVERLAY COMPARTIDO ── */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.78);
+            z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+
+        .panel {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
+            border: 4px solid #fbbf24;
+            border-radius: 20px;
+            padding: 36px 44px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(251,191,36,0.3);
+            text-align: center;
+        }
+
+        .panel h1 {
+            font-size: 38px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 20px rgba(251,191,36,0.6);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .panel .subtitle {
+            color: #a5b4fc;
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .tut-item {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e0e7ff;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .tut-item span.key {
+            display: inline-block;
+            background: #fbbf24;
+            color: #1e1b4b;
+            font-weight: 700;
+            border-radius: 6px;
+            padding: 1px 8px;
+            font-size: 14px;
+            margin-right: 4px;
+        }
+
+        .tut-item .icon { font-size: 22px; display: block; margin-bottom: 4px; }
+
+        .tut-cookies {
+            background: rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: #e0e7ff;
+            font-size: 15px;
+            margin-bottom: 20px;
+            line-height: 1.7;
+            text-align: left;
+        }
+
+        .btn-play {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 48px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s, box-shadow 0.15s;
+            letter-spacing: 1px;
+        }
+        .btn-play:hover {
+            transform: scale(1.06);
+            box-shadow: 0 8px 28px rgba(251,191,36,0.6);
+        }
+
+        /* ── GAME OVER ── */
+        #goScore { font-size: 28px; color: #a5b4fc; margin: 12px 0 24px; }
+        #goScore span { color: #fbbf24; font-weight: 700; font-size: 36px; }
+
+        .btn-retry {
+            background: linear-gradient(135deg, #ec4899, #be185d);
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(236,72,153,0.4);
+            transition: transform 0.15s;
+            margin-right: 12px;
+        }
+        .btn-retry:hover { transform: scale(1.06); }
+
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 14px;
+            padding: 12px 40px;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+        .btn-back:hover { transform: scale(1.06); }
+
+        /* ── PAUSA ── */
+        #pauseBtn {
+            position: absolute;
+            top: 52px;
+            right: 12px;
+            z-index: 5;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #fbbf24;
+            border-radius: 10px;
+            color: #fbbf24;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            display: none;
+        }
+        #pauseBtn:hover { background: rgba(251,191,36,0.2); transform: scale(1.08); }
+        #pauseBtn.visible { display: block; }
+
+        .pause-panel h2 {
+            font-size: 34px;
+            color: #fbbf24;
+            margin-bottom: 28px;
+            text-shadow: 0 0 16px rgba(251,191,36,0.5);
+        }
+        .pause-panel .btn-resume {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: #1e1b4b;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 44px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(251,191,36,0.4);
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        .pause-panel .btn-resume:hover { transform: scale(1.05); }
+        .pause-panel .btn-quit {
+            background: rgba(255,255,255,0.1);
+            color: #e0e7ff;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-radius: 14px;
+            padding: 10px 44px;
+            cursor: pointer;
+            transition: transform 0.15s;
+            display: block;
+            width: 100%;
+        }
+        .pause-panel .btn-quit:hover { transform: scale(1.05); }
+
+        /* ── Victoria (Modo Historia) ── */
+        #victoryOverlay {
+            background: radial-gradient(ellipse at center, #1a1a4e 0%, #0a0a1e 100%);
+        }
+        #victoryOverlay .panel {
+            text-align: center;
+            padding: 48px 56px;
+            position: relative;
+            overflow: hidden;
+        }
+        #victoryOverlay .panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .victory-title {
+            font-size: 64px;
+            font-weight: 700;
+            color: #fbbf24;
+            text-shadow: 0 0 40px rgba(251,191,36,0.8), 0 4px 16px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+            animation: victoryPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes victoryPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.04); }
+        }
+        .victory-sub {
+            font-size: 22px;
+            color: rgba(255,255,255,0.75);
+            margin-bottom: 28px;
+        }
+        #victoryScore {
+            font-size: 28px;
+            color: white;
+            margin-bottom: 36px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 14px;
+            padding: 14px 28px;
+            display: inline-block;
+        }
+        #victoryScore span {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        .btn-victory {
+            background: linear-gradient(135deg, #7c3aed, #be185d);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            padding: 16px 40px;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+        }
+        .btn-victory:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(124,58,237,0.6);
+        }
+        /* Confetti stars */
+        .confetti-star {
+            position: absolute;
+            font-size: 20px;
+            animation: floatStar 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes floatStar {
+            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+<div id="wrapper">
+    <canvas id="gameCanvas" width="1280" height="720"></canvas>
+
+    <!-- TUTORIAL -->
+    <div class="overlay" id="tutorialOverlay">
+        <div class="panel">
+            <h1>🍪 Portal Galleta</h1>
+            <p class="subtitle">¡No dejes que las galletas caigan al suelo!</p>
+
+            <div class="tutorial-grid">
+                <div class="tut-item">
+                    <span class="icon">🏃</span>
+                    <span class="key">A</span> / <span class="key">◀</span> Mover izquierda<br>
+                    <span class="key">D</span> / <span class="key">▶</span> Mover derecha
+                </div>
+                <div class="tut-item">
+                    <span class="icon">⬆️</span>
+                    <span class="key">Espacio</span><br>
+                    Saltar para atrapar galletas
+                </div>
+                <div class="tut-item">
+                    <span class="icon">💔</span>
+                    Si una galleta cae al suelo, <strong>pierdes una vida</strong>. Tienes <strong>3 vidas</strong>.
+                </div>
+                <div class="tut-item">
+                    <span class="icon">😱</span>
+                    <strong>Comelona</strong> intentará robarte las galletas. ¡Salta antes que ella!
+                </div>
+            </div>
+
+            <div class="tut-cookies">
+                🟤 <strong>Galleta con Chispas</strong> — Común → <strong>10 pts</strong><br>
+                🍫 <strong>Galleta de Chocolate</strong> — Rara → <strong>50 pts</strong><br>
+                ¡La velocidad de las galletas aumenta con el tiempo!
+            </div>
+
+            <button class="btn-play" id="btnPlay">¡Jugar!</button>
+        </div>
+    </div>
+
+    <!-- BOTÓN PAUSA -->
+    <button id="pauseBtn">⏸ Pausa</button>
+
+    <!-- PAUSA OVERLAY -->
+    <div class="overlay hidden" id="pauseOverlay">
+        <div class="panel pause-panel">
+            <h2>⏸ Juego en Pausa</h2>
+            <button class="btn-resume" id="btnResume">▶ Continuar</button>
+            <button class="btn-quit" id="btnQuitPause">← Volver al menú</button>
+        </div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div class="overlay hidden" id="gameOverOverlay">
+        <div class="panel">
+            <h1>💀 ¡Game Over!</h1>
+            <div id="goScore">Puntuación: <span id="finalScore">0</span></div>
+            <button class="btn-retry" id="btnRetry">🔄 Reintentar</button>
+            <button class="btn-back" id="btnBack">← Volver</button>
+        </div>
+    </div>
+
+    <!-- VICTORIA (Modo Historia) -->
+    <div class="overlay hidden" id="victoryOverlay">
+        <div class="panel">
+            <span class="confetti-star" style="left:10%;bottom:5%;animation-delay:0.0s;animation-duration:2.5s">⭐</span><span class="confetti-star" style="left:25%;bottom:8%;animation-delay:0.4s;animation-duration:3.0s">✨</span><span class="confetti-star" style="left:40%;bottom:3%;animation-delay:0.8s;animation-duration:2.8s">🌟</span><span class="confetti-star" style="left:60%;bottom:6%;animation-delay:0.2s;animation-duration:3.2s">⭐</span><span class="confetti-star" style="left:75%;bottom:9%;animation-delay:0.6s;animation-duration:2.6s">✨</span><span class="confetti-star" style="left:88%;bottom:4%;animation-delay:1.0s;animation-duration:3.0s">🌟</span><span class="confetti-star" style="left:50%;bottom:12%;animation-delay:0.3s;animation-duration:2.9s">⭐</span><span class="confetti-star" style="left:18%;bottom:15%;animation-delay:0.7s;animation-duration:3.1s">✨</span><span class="confetti-star" style="left:82%;bottom:11%;animation-delay:0.1s;animation-duration:2.7s">🌟</span>
+            <div class="victory-title">🏆 ¡Victoria! 🏆</div>
+            <div class="victory-sub" id="victorySubtitle">¡Lo lograste!</div>
+            <div id="victoryScore">Puntaje obtenido: <span id="victoryScoredNum">0</span></div>
+            <button class="btn-victory" id="btnVictory">🎮 Volver al menú</button>
+        </div>
+    </div>
+    <!-- CONTROLES TÁCTILES -->
+    <div id="touchControls" style="display:none;position:absolute;bottom:20px;left:0;width:100%;z-index:30;pointer-events:none;justify-content:space-between;align-items:flex-end;padding:0 28px;box-sizing:border-box;">
+        <button id="btnTouchLeft"  style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">◀</button>
+        <button id="btnTouchRight" style="pointer-events:all;width:110px;height:110px;border-radius:50%;background:rgba(0,0,0,0.45);border:3px solid rgba(255,255,255,0.55);color:white;font-size:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;">▶</button>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  PORTAL GALLETA — Motor de juego
+// ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  MODO HISTORIA — Configuración
+// ═══════════════════════════════════════════════════
+const GAME_KEY   = 'portalGalleta';
+const GAME_NAME  = 'Portal Galleta';
+const WIN_SCORE  = 500;
+const HISTORIA_COMPLETED_KEY = 'historia_completed';
+const SESSION_GAME_KEY = 'jugueton_came_from_minigame';
+
+function isHistoriaMode() {
+    return sessionStorage.getItem('jugueton_mode') === 'historia';
+}
+
+function checkWin() {
+    if (!isHistoriaMode()) return;
+    if (state.score >= WIN_SCORE) {
+        triggerVictory();
+    }
+}
+
+function triggerVictory() {
+    if (state._victoryTriggered) return;
+    state._victoryTriggered = true;
+    state.running = false;
+
+    // Marcar como completado
+    let completed = JSON.parse(localStorage.getItem(HISTORIA_COMPLETED_KEY) || '[]');
+    if (!completed.includes(GAME_KEY)) {
+        completed.push(GAME_KEY);
+        localStorage.setItem(HISTORIA_COMPLETED_KEY, JSON.stringify(completed));
+    }
+    // Guardar cuál minijuego se acaba de ganar para que Juguetón lo comente
+    sessionStorage.setItem('jugueton_last_win', GAME_NAME);
+    sessionStorage.setItem(SESSION_GAME_KEY, '1');
+
+    // Mostrar overlay de victoria
+    document.getElementById('victoryScoredNum').textContent = state.score;
+    const totalGames = 6;
+    const remaining  = totalGames - completed.length;
+    document.getElementById('victorySubtitle').textContent =
+        remaining === 0
+        ? '¡Completaste todos los minijuegos! 🎉'
+        : `¡Te quedan ${remaining} minijuego${remaining === 1 ? '' : 's'} por completar!`;
+    document.getElementById('victoryOverlay').classList.remove('hidden');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const btnV = document.getElementById('btnVictory');
+    if (btnV) btnV.addEventListener('click', () => { window.location.href = 'index.html'; });
+});
+
+const canvas  = document.getElementById('gameCanvas');
+const ctx     = canvas.getContext('2d');
+const W = 1280, H = 720;
+const SCALE   = 6;
+
+// ── Medidas escaladas ──
+const PLAYER_W = 12 * SCALE;   // 72
+const PLAYER_H =  8 * SCALE;   // 48
+const COOKIE_W =  8 * SCALE;   // 48
+const COOKIE_H =  3 * SCALE;   // 18
+const AAAA_W   = 25 * SCALE;   // 150
+const AAAA_H   =  8 * SCALE;   // 48
+const COM_W    = 12 * SCALE;   // 72
+const COM_H    =  9 * SCALE;   // 54
+const COME_W   = 11 * SCALE;   // 66
+const COME_H   = 11 * SCALE;   // 66
+
+// ── Física ──
+const FLOOR_Y    = 630;
+const GRAVITY    = 0.7;
+const JUMP_VEL   = -22;
+const PLAYER_SPD = 12;
+const COMELONA_Y = 354;  // altura a la que vuela Comelona
+
+// ── Puntos ──
+const PTS_CHISPAS   = 10;
+const PTS_CHOCOLATE = 50;
+
+// ── Imágenes ──
+function img(src) {
+    const i = new Image();
+    i.src = src;
+    return i;
+}
+const imgs = {
+    bg:         img('Cielo.png'),
+    player:     img('PortalNiño.png'),
+    playerAAAa: img('PortalNiñoAAAA.png'),
+    chispas:    img('GalletaConChispas.png'),
+    chocolate:  img('GalletaDeChocolate.png'),
+    comelona:   img('Comelona.png'),
+    comelonaC:  img('ComelonaComiendo.png'),
+};
+
+// ═══════════════════════════════════════════════════
+//  ESTADO DEL JUEGO
+// ═══════════════════════════════════════════════════
+let state = {};
+
+function resetState() {
+    state = {
+        running: false,
+        score: 0,
+        lives: 3,
+        // Player
+        px: W / 2 - PLAYER_W / 2,
+        py: FLOOR_Y - PLAYER_H,
+        pvx: 0,
+        pvy: 0,
+        onGround: true,
+        // Cookies
+        cookies: [],
+        cookieTimer: 0,
+        cookieInterval: 120,  // frames entre galletas
+        cookieSpeed: 2.5,
+        speedTimer: 0,
+        // Comelona
+        comelona: null,
+        comelonaActive: false,
+        comelonaFrame: 0,
+        comelonaAnimTimer: 0,
+        comelonaUnlocked: false,
+        comelonaWarningVisible: false,
+        pendingComelona: null,       // datos de Comelona esperando el countdown
+        comelonaWarningCountdown: 0, // frames restantes antes de que aparezca
+        // Hurt
+        hurtTimer: 0,
+        hurtX: W / 2 - AAAA_W / 2,
+        hurtY: FLOOR_Y - AAAA_H,
+        shakeAmp: 0,
+        // Controls
+        keys: {},
+        // Time
+        elapsed: 0,
+    };
+}
+
+// ═══════════════════════════════════════════════════
+//  INPUT
+// ═══════════════════════════════════════════════════
+window.addEventListener('keydown', e => {
+    state.keys[e.code] = true;
+    if (e.code === 'Space') e.preventDefault();
+    if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
+});
+window.addEventListener('keyup', e => {
+    state.keys[e.code] = false;
+});
+
+// ═══════════════════════════════════════════════════
+//  GALLETAS
+// ═══════════════════════════════════════════════════
+function spawnCookie() {
+    const isChoco = Math.random() < 0.2;
+    const x = Math.random() * (W - COOKIE_W);
+    state.cookies.push({
+        x, y: -COOKIE_H,
+        speed: state.cookieSpeed,
+        type: isChoco ? 'chocolate' : 'chispas',
+        targeted: false,   // si Comelona ya va a por ella
+    });
+}
+
+function updateCookies() {
+    for (let i = state.cookies.length - 1; i >= 0; i--) {
+        const c = state.cookies[i];
+        c.y += c.speed;
+
+        // ¿La atrapa el jugador?
+        if (rectsOverlap(state.px, state.py, PLAYER_W, PLAYER_H,
+                         c.x, c.y, COOKIE_W, COOKIE_H)) {
+            state.score += c.type === 'chocolate' ? PTS_CHOCOLATE : PTS_CHISPAS;
+            checkWin();
+            // Si Comelona iba a por esta, marcarla como "galleta perdida"
+            // y dejar que updateComelona gestione la salida limpiamente
+            if (state.comelona && state.comelona.targetCookie === c) {
+                state.comelona.cookieLost = true;
+            }
+            // Si aún estaba en countdown, cancelar
+            if (state.pendingComelona && state.pendingComelona.targetCookie === c) {
+                state.pendingComelona = null;
+                state.comelonaWarningCountdown = 0;
+                c.targeted = false;
+            }
+            state.cookies.splice(i, 1);
+            continue;
+        }
+
+        // ¿Llegó al suelo?
+        if (c.y + COOKIE_H >= FLOOR_Y) {
+            if (state.comelona && state.comelona.targetCookie === c) {
+                state.comelona.cookieLost = true;
+            }
+            loseLife();
+            state.cookies.splice(i, 1);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════
+//  COMELONA
+// ═══════════════════════════════════════════════════
+function trySpawnComelona() {
+    if (state.comelona) return;
+    if (state.pendingComelona) return;
+    if (!state.comelonaUnlocked) return;
+
+    // Busca una galleta sin asignar (prefiere chocolate)
+    let target = null;
+    for (const c of state.cookies) {
+        if (c.targeted) continue;
+        if (COMELONA_Y - c.y <= 0) continue; // ya pasó la altura de Comelona
+        if (c.type === 'chocolate') { target = c; break; }
+        if (!target) target = c;
+    }
+    if (!target) return;
+    if (Math.random() > 0.35) return;
+
+    target.targeted = true;
+
+    const distToIntercept = COMELONA_Y - target.y;
+    const framesUntilIntercept = distToIntercept / target.speed;
+    // Comelona tiene todo ese tiempo para llegar (sin warning fijo)
+    const timeToFly = Math.max(framesUntilIntercept - 10, 5);
+    const interceptX = target.x + COOKIE_W / 2 - COM_W / 2;
+
+    const fromLeft = Math.random() < 0.5;
+    const startX   = fromLeft ? -COM_W - 10 : W + 10;
+    const dist     = Math.abs(interceptX - startX);
+    const speed    = dist / timeToFly;
+
+    state.pendingComelona = {
+        x: startX,
+        y: COMELONA_Y,
+        targetX: interceptX,
+        speed,
+        dir: fromLeft ? 1 : -1,
+        originDir: fromLeft ? 1 : -1,
+        phase: 'moving',
+        eatTimer: 0,
+        targetCookie: target,
+        cookieLost: false,
+        animFrame: 0,
+        animTimer: 0,
+    };
+    // Countdown mínimo para que aparezca (ajustado a lo que quede de tiempo)
+    state.comelonaWarningCountdown = Math.min(60, Math.floor(framesUntilIntercept * 0.3));
+}
+
+function updateComelona() {
+    const com = state.comelona;
+    if (!com) return;
+
+    // Animación frames (alterna cada 20 frames)
+    com.animTimer++;
+    if (com.animTimer >= 20) { com.animTimer = 0; com.animFrame ^= 1; }
+
+    // Si el jugador atrapó la galleta, Comelona se va decepcionada
+    // (lo gestionamos aquí para evitar doble-reversión del dir)
+    if (com.cookieLost && com.phase !== 'leaving') {
+        com.phase = 'leaving';
+        com.dir = com.originDir * -1; // vuelve hacia donde vino siempre
+    }
+
+    if (com.phase === 'moving') {
+        com.x += com.speed * com.dir;
+        const arrived = com.dir === 1
+            ? com.x >= com.targetX
+            : com.x <= com.targetX;
+
+        if (arrived) {
+            com.x = com.targetX;
+            if (com.cookieLost) {
+                // Galleta ya no existe, irse
+                com.phase = 'leaving';
+                com.dir = com.originDir * -1;
+            } else {
+                com.phase = 'eating';
+                com.eatTimer = 60;
+            }
+        }
+    } else if (com.phase === 'eating') {
+        com.eatTimer--;
+        const tc = com.targetCookie;
+        // Cuando la galleta llega a la altura de Comelona, la come
+        if (tc && state.cookies.includes(tc) && tc.y + COOKIE_H >= com.y) {
+            const idx = state.cookies.indexOf(tc);
+            if (idx !== -1) state.cookies.splice(idx, 1);
+            com.phase = 'leaving';
+            com.dir = com.originDir * -1;
+        }
+    } else if (com.phase === 'leaving') {
+        com.x += com.speed * com.dir;
+        if (com.x < -COM_W - 20 || com.x > W + 20) {
+            state.comelona = null;
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════
+//  VIDA / HURT
+// ═══════════════════════════════════════════════════
+function loseLife() {
+    state.lives--;
+    state.hurtTimer = 55;
+    state.shakeAmp  = 8;
+
+    // Elimina galletas y cualquier estado de Comelona
+    state.cookies = [];
+    state.comelona = null;
+    state.pendingComelona = null;
+    state.comelonaWarningCountdown = 0;
+
+    if (state.lives <= 0) {
+        setTimeout(() => endGame(), 1500);
+    }
+}
+
+// ═══════════════════════════════════════════════════
+//  COLISIÓN RECTANGULOS
+// ═══════════════════════════════════════════════════
+function rectsOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx &&
+           ay < by + bh && ay + ah > by;
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════
+let lastTime = 0;
+let paused = false;
+
+function togglePause() {
+    if (!state.running) return;
+    paused = !paused;
+    const overlay = document.getElementById('pauseOverlay');
+    const btn = document.getElementById('pauseBtn');
+    if (paused) {
+        overlay.classList.remove('hidden');
+        btn.textContent = '▶ Reanudar';
+    } else {
+        overlay.classList.add('hidden');
+        btn.textContent = '⏸ Pausa';
+        lastTime = performance.now();
+        requestAnimationFrame(loop);
+    }
+}
+
+function loop(ts) {
+    if (!state.running || paused) return;
+    requestAnimationFrame(loop);
+
+    const dt = ts - lastTime;
+    lastTime = ts;
+
+    update();
+    draw();
+}
+
+function update() {
+    if (!state.running) return;
+    if (state.lives <= 0) return;
+
+    state.elapsed++;
+
+    // ── Desbloquear Comelona a los 25 segundos (~1500 frames) ──
+    if (state.elapsed >= 1500) state.comelonaUnlocked = true;
+
+    // ── Countdown de aviso de Comelona ──
+    if (state.comelonaWarningCountdown > 0) {
+        state.comelonaWarningCountdown--;
+        if (state.comelonaWarningCountdown === 0 && state.pendingComelona) {
+            // ¡Aparece Comelona!
+            state.comelona = state.pendingComelona;
+            state.pendingComelona = null;
+        }
+    }
+
+    // El aviso es visible siempre que Comelona esté desbloqueada
+    state.comelonaWarningVisible = state.comelonaUnlocked;
+
+    // ── Aumentar velocidad cada 10 segundos ──
+    state.speedTimer++;
+    if (state.speedTimer >= 600) {
+        state.speedTimer = 0;
+        state.cookieSpeed   = Math.min(state.cookieSpeed + 0.4, 8);
+        state.cookieInterval= Math.max(state.cookieInterval - 8, 50);
+    }
+
+    // ── Hurt timer ──
+    if (state.hurtTimer > 0) {
+        state.hurtTimer--;
+        state.shakeAmp = state.hurtTimer > 0 ? 6 : 0;
+        return; // jugador no se mueve mientras está asustado
+    }
+
+    // ── Player movement ──
+    const left  = state.keys['KeyA'] || state.keys['ArrowLeft'];
+    const right = state.keys['KeyD'] || state.keys['ArrowRight'];
+    const jump  = state.keys['Space'] || state.keys['ArrowUp'] || state.keys['KeyW'];
+
+    // Velocidad del jugador escala con la velocidad de caída de las galletas
+    const playerSpd = PLAYER_SPD * (state.cookieSpeed / 2.5);
+
+    state.pvx = 0;
+    if (left)  state.pvx = -playerSpd;
+    if (right) state.pvx =  playerSpd;
+
+    if (jump && state.onGround) {
+        state.pvy = JUMP_VEL;
+        state.onGround = false;
+    }
+
+    state.pvy += GRAVITY;
+    state.px  += state.pvx;
+    state.py  += state.pvy;
+
+    // Límites horizontales
+    if (state.px < 0)             state.px = 0;
+    if (state.px + PLAYER_W > W)  state.px = W - PLAYER_W;
+
+    // Suelo
+    if (state.py + PLAYER_H >= FLOOR_Y) {
+        state.py = FLOOR_Y - PLAYER_H;
+        state.pvy = 0;
+        state.onGround = true;
+    }
+
+    // ── Spawn galletas ──
+    state.cookieTimer++;
+    if (state.cookieTimer >= state.cookieInterval) {
+        state.cookieTimer = 0;
+        spawnCookie();
+        // Intentar spawn Comelona con cada galleta nueva
+        trySpawnComelona();
+    }
+
+    updateCookies();
+    updateComelona();
+}
+
+// ═══════════════════════════════════════════════════
+//  DIBUJO
+// ═══════════════════════════════════════════════════
+function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Fondo
+    ctx.drawImage(imgs.bg, 0, 0, W, H);
+
+    // Piso
+    drawFloor();
+
+    // Galletas
+    for (const c of state.cookies) {
+        const src = c.type === 'chocolate' ? imgs.chocolate : imgs.chispas;
+        ctx.drawImage(src, c.x, c.y, COOKIE_W, COOKIE_H);
+    }
+
+    // Comelona
+    if (state.comelona) {
+        const com = state.comelona;
+        const sprite = com.animFrame === 0 ? imgs.comelona : imgs.comelonaC;
+        const sw = com.animFrame === 0 ? COM_W : COME_W;
+        const sh = com.animFrame === 0 ? COM_H : COME_H;
+
+        // Flip según dirección
+        ctx.save();
+        if (com.dir === -1) {
+            ctx.scale(-1, 1);
+            ctx.drawImage(sprite, -(com.x + sw), com.y, sw, sh);
+        } else {
+            ctx.drawImage(sprite, com.x, com.y, sw, sh);
+        }
+        ctx.restore();
+    }
+
+    // Player
+    if (state.hurtTimer > 0) {
+        // Animación de temblor
+        const ox = state.shakeAmp > 0 ? (Math.random() - 0.5) * state.shakeAmp * 2 : 0;
+        const oy = state.shakeAmp > 0 ? (Math.random() - 0.5) * state.shakeAmp     : 0;
+        ctx.drawImage(imgs.playerAAAa,
+            state.hurtX + ox, state.hurtY + oy,
+            AAAA_W, AAAA_H);
+    } else {
+        ctx.drawImage(imgs.player, state.px, state.py, PLAYER_W, PLAYER_H);
+    }
+
+    // HUD
+    drawHUD();
+}
+
+function drawFloor() {
+    // Franja de tierra
+    const floorH = H - FLOOR_Y;
+    const grad = ctx.createLinearGradient(0, FLOOR_Y, 0, H);
+    grad.addColorStop(0, '#6b4c2a');
+    grad.addColorStop(0.3, '#8B6343');
+    grad.addColorStop(1, '#5a3a1a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, FLOOR_Y, W, floorH);
+
+    // Línea de hierba
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, FLOOR_Y, W, 6);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(0, FLOOR_Y + 6, W, 4);
+}
+
+function drawHUD() {
+    // Fondo HUD
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, 0, W, 44);
+
+    // Score
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px Fredoka';
+    ctx.textAlign = 'left';
+    ctx.fillText(`⭐ ${state.score}`, 16, 30);
+
+    // Vidas (corazones)
+    ctx.textAlign = 'right';
+    ctx.font = '22px Fredoka';
+    let hearts = '';
+    for (let i = 0; i < 3; i++) hearts += i < state.lives ? '❤️ ' : '🖤 ';
+    ctx.fillStyle = 'white';
+    ctx.fillText(hearts.trim(), W - 16, 30);
+
+    // Indicador Comelona
+    if (state.comelonaWarningVisible) {
+        ctx.textAlign = 'center';
+        ctx.font = '16px Fredoka';
+        ctx.fillStyle = '#f472b6';
+        ctx.fillText('⚠️ ¡Comelona anda suelta!', W / 2, 28);
+    }
+}
+
+// ═══════════════════════════════════════════════════
+//  INICIO / FIN
+// ═══════════════════════════════════════════════════
+function startGame() {
+    resetState();
+    paused = false;
+    state.running = true;
+    document.getElementById('pauseBtn').classList.add('visible');
+    document.getElementById('pauseBtn').textContent = '⏸ Pausa';
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+}
+
+function endGame() {
+    state.running = false;
+    paused = false;
+    document.getElementById('pauseBtn').classList.remove('visible');
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('finalScore').textContent = state.score;
+    document.getElementById('gameOverOverlay').classList.remove('hidden');
+    // ── Guardar mejor puntaje ──
+    const _prevPG = parseInt(localStorage.getItem('score_portalGalleta') || '0');
+    if (state.score > _prevPG) localStorage.setItem('score_portalGalleta', state.score);
+}
+
+// ═══════════════════════════════════════════════════
+//  BOTONES UI
+// ═══════════════════════════════════════════════════
+document.getElementById('btnPlay').addEventListener('click', () => {
+    document.getElementById('tutorialOverlay').classList.add('hidden');
+    startGame();
+});
+
+document.getElementById('btnRetry').addEventListener('click', () => {
+    document.getElementById('gameOverOverlay').classList.add('hidden');
+    startGame();
+});
+
+document.getElementById('btnBack').addEventListener('click', () => {
+    history.back();
+});
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+document.getElementById('btnResume').addEventListener('click', togglePause);
+
+document.getElementById('btnQuitPause').addEventListener('click', () => {
+    state.running = false;
+    paused = false;
+    history.back();
+});
+
+// Dibuja el fondo mientras espera en el tutorial
+(function initCanvas() {
+    imgs.bg.onload = () => {
+        ctx.drawImage(imgs.bg, 0, 0, W, H);
+        drawFloor();
+    };
+})();
+
+// ── RESPONSIVE SCALING ──
+(function(){
+    var wrapper = document.getElementById('wrapper');
+    function scaleGame(){
+        var vw = window.innerWidth, vh = window.innerHeight;
+        wrapper.style.position        = 'absolute';
+        wrapper.style.left            = '50%';
+        wrapper.style.top             = '50%';
+        wrapper.style.transformOrigin = 'center center';
+        if (vw < vh) {
+            // Portrait: rota 90° para que el juego ocupe la pantalla en horizontal
+            var s = Math.min(vh / 1280, vw / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) rotate(90deg) scale('+s+')';
+        } else {
+            var s = Math.min(vw / 1280, vh / 720);
+            wrapper.style.transform = 'translate(-50%,-50%) scale('+s+')';
+        }
+    }
+    window.addEventListener('resize', scaleGame);
+    window.addEventListener('orientationchange', scaleGame);
+    scaleGame();
+})();
+
+
+// ── TOUCH CONTROLS (◀ ▶) ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var tc = document.getElementById('touchControls');
+    tc.style.display = 'flex';
+    function bind(id, code){
+        var btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('touchstart',  function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keydown',{code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchend',    function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+        btn.addEventListener('touchcancel', function(e){ e.preventDefault(); document.dispatchEvent(new KeyboardEvent('keyup',  {code:code,bubbles:true})); }, {passive:false});
+    }
+    bind('btnTouchLeft',  'ArrowLeft');
+    bind('btnTouchRight', 'ArrowRight');
+})();
+
+
+// ── TOUCH → SPACE ──
+(function(){
+    if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+    var wrapper = document.getElementById('wrapper');
+    var tc      = document.getElementById('touchControls'); // puede ser null
+    wrapper.addEventListener('touchstart', function(e){
+        if (tc && tc.contains(e.target)) return; // ignora botones direccionales
+        document.dispatchEvent(new KeyboardEvent('keydown',{code:'Space',bubbles:true}));
+    }, {passive:true});
+    wrapper.addEventListener('touchend', function(e){
+        if (tc && tc.contains(e.target)) return;
+        document.dispatchEvent(new KeyboardEvent('keyup',{code:'Space',bubbles:true}));
+    }, {passive:true});
+})();
+
+</script>
+</body>
+</html>
