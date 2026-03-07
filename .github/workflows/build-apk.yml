@@ -74,4 +74,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MundoJugueton-APK
-          path: MundoJugueton/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: MundoJugueton/platforms/android/app/build/outputs/apk/debug/app-debug.apk
