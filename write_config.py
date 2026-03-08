@@ -1,6 +1,6 @@
 xml = """<?xml version='1.0' encoding='utf-8'?>
 <widget id="com.tujuego.mundojugueton" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-<n>Mundo Jugueton</n>
+<name>Mundo Jugueton</name>
 <description>Juego educativo interactivo</description>
 <author>Las Cabezas de Ignacio</author>
 <content src="index.html" />
@@ -15,7 +15,6 @@ xml = """<?xml version='1.0' encoding='utf-8'?>
 <access origin="*" />
 </widget>"""
 
-with open('MundoJugueton/config.xml', 'w') as f:
+with open(chr(77)+'undoJugueton/config.xml', 'w') as f:
     f.write(xml)
-
-print("config.xml escrito correctamente!")
+print("config.xml escrito!")
