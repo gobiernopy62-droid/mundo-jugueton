@@ -47,6 +47,10 @@ jobs:
       - name: Configurar config.xml
         run: python3 write_config.py
 
+      - name: Fijar Gradle 8.7
+        run: |
+          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' MundoJugueton/platforms/android/gradle/wrapper/gradle-wrapper.properties
+
       - name: Compilar APK
         run: |
           cd MundoJugueton
