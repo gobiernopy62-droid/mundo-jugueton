@@ -25,13 +25,13 @@ jobs:
           java-version: '17'
 
       - name: Instalar Cordova
-        run: npm install -g cordova
+        run: npm install -g cordova@11
 
       - name: Crear proyecto Cordova
         run: |
           cordova create MundoJugueton com.tujuego.mundojugueton "Mundo Jugueton"
           cd MundoJugueton
-          cordova platform add android
+          cordova platform add android@11
 
       - name: Copiar archivos del juego
         run: |
