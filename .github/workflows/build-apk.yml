@@ -24,6 +24,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Instalar Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
       - name: Instalar Cordova
         run: npm install -g cordova@12
 
@@ -47,14 +52,12 @@ jobs:
       - name: Configurar config.xml
         run: python3 write_config.py
 
-      - name: Fijar Gradle 8.7
-        run: |
-          find MundoJugueton/platforms/android -name "gradle-wrapper.properties" -exec sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' {} \;
-
       - name: Compilar APK
         run: |
           cd MundoJugueton
           cordova build android --debug
+        env:
+          GRADLE_HOME: /usr/local/gradle-8.7
 
       - name: Subir APK
         uses: actions/upload-artifact@v4
