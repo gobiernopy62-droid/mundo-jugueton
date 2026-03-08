@@ -49,7 +49,7 @@ jobs:
 
       - name: Fijar Gradle 8.7
         run: |
-          sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' MundoJugueton/platforms/android/gradle/wrapper/gradle-wrapper.properties
+          find MundoJugueton/platforms/android -name "gradle-wrapper.properties" -exec sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' {} \;
 
       - name: Compilar APK
         run: |
