@@ -32,7 +32,6 @@ jobs:
           cordova create MundoJugueton com.tujuego.mundojugueton "Mundo Jugueton"
           cd MundoJugueton
           cordova platform add android
-          cordova plugin add cordova-plugin-whitelist
 
       - name: Copiar archivos del juego
         run: |
@@ -50,7 +49,7 @@ jobs:
           python3 -c "
           xml = '''<?xml version=\"1.0\" encoding=\"utf-8\"?>
           <widget id=\"com.tujuego.mundojugueton\" version=\"1.0.0\" xmlns=\"http://www.w3.org/ns/widgets\" xmlns:cdv=\"http://cordova.apache.org/ns/1.0\">
-          <name>Mundo Jugueton</name>
+          <n>Mundo Jugueton</n>
           <description>Juego educativo interactivo</description>
           <author>Las Cabezas de Ignacio</author>
           <content src=\"index.html\" />
